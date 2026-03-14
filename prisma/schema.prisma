@@ -1,0 +1,170 @@
+// Gulf Container Shipping - Prisma Schema
+// NextAuth adapter models + custom User role, CompanyProfile, DriverProfile, Location, Order
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  COMPANY
+  DRIVER
+  ADMIN
+  SUPERVISOR
+}
+
+enum OrderStatus {
+  PENDING_APPROVAL
+  PENDING_DRIVER
+  ACCEPTED
+  IN_PROGRESS
+  DONE
+  REFUSED
+  CANCELLED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  role          UserRole
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts        Account[]
+  sessions        Session[]
+  companyProfile  CompanyProfile?
+  driverProfile   DriverProfile?
+  ordersAsCompany Order[]     @relation("OrderCompany")
+  ordersAsDriver  Order[]     @relation("OrderDriver")
+
+  @@index([role])
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+model CompanyProfile {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  companyName        String
+  commercialRegister String?
+  contactPerson      String
+  phone              String
+  address            String?
+  city               String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DriverProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  fullName       String
+  nationalId     String?
+  phone          String
+  licenseNumber  String?
+  carPlate       String
+  carType        String?
+  carCapacity    String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Location {
+  id     String  @id @default(cuid())
+  nameAr String
+  nameEn String?
+  slug   String  @unique
+
+  ordersFrom Order[] @relation("OrderFrom")
+  ordersTo   Order[] @relation("OrderTo")
+}
+
+model Order {
+  id             String      @id @default(cuid())
+  bookingNumber  String?     @unique
+  companyId      String
+  driverId       String?
+  fromLocationId String
+  toLocationId   String
+  status         OrderStatus @default(PENDING_APPROVAL)
+  notes          String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  company      User     @relation("OrderCompany", fields: [companyId], references: [id], onDelete: Cascade)
+  driver       User?    @relation("OrderDriver", fields: [driverId], references: [id], onDelete: SetNull)
+  fromLocation Location @relation("OrderFrom", fields: [fromLocationId], references: [id])
+  toLocation   Location @relation("OrderTo", fields: [toLocationId], references: [id])
+
+  @@index([companyId])
+  @@index([driverId])
+  @@index([status])
+  @@index([bookingNumber])
+}
+
+model NewsItem {
+  id         String   @id @default(cuid())
+  titleAr    String
+  titleEn    String?
+  category   String
+  imageUrl   String
+  excerpt    String?
+  link       String?
+  publishedAt DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([publishedAt])
+}
+
+model CustomerAdvisory {
+  id          String   @id @default(cuid())
+  titleAr     String
+  titleEn     String?
+  excerpt     String?
+  publishedAt DateTime
+  link        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([publishedAt])
+}

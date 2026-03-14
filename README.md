@@ -1,36 +1,80 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# شركة خليج الحاويات للنقل — Gulf Container Shipping
 
-## Getting Started
+منصة Next.js (App Router) لربط الشركات الراغبة بنقل بضائعها بسائقي الحاويات في المملكة العربية السعودية. تديرها شركة خليج الحاويات للنقل.
 
-First, run the development server:
+## المميزات
+
+- **صفحة هبوط** عربية RTL مع أقسام: Hero، الخدمات، كيف يعمل، التغطية، CTA، Footer
+- **حسابات:** شركات (طلبات نقل)، سائقون (قبول/رفض الطلبات)، إدارة ومشرفون (عرض الطلبات وبيانات التواصل وإغلاق الطلبات)
+- **الطلبات:** الشركة تختار من → إلى ثم السائق؛ السائق يقبل أو يرفض؛ الإدارة فقط ترى بيانات التواصل وتحدّث الحالة وتحذف الطلبات المنتهية
+
+## التقنيات
+
+- Next.js 14+ (App Router), TypeScript, Tailwind CSS
+- Prisma (PostgreSQL) مع إمكانية استخدام Prisma Postgres (Accelerate)
+- NextAuth.js v5 (Credentials + JWT)
+- shadcn/ui، واجهة عربية RTL
+
+## الإعداد
+
+### 1. تثبيت الحزم
+
+```bash
+npm install
+```
+
+### 2. قاعدة البيانات
+
+- ضع `DATABASE_URL` في ملف `.env` (انظر `.env.example`).
+- لاستخدام **Prisma Postgres** محلياً: شغّل `npx prisma dev` ثم استخدم الـ URL الناتج في `.env`.
+- لاستخدام **PostgreSQL عادي**: ضع في `.env` رابطاً مثل `postgresql://user:pass@localhost:5432/dbname`. التطبيق يستخدم محول `@prisma/adapter-pg` تلقائياً عندما لا يبدأ الرابط بـ `prisma+postgres://` أو `prisma://`.
+
+### 3. تطبيق المخطط وبذر البيانات
+
+```bash
+npx prisma db push
+npx prisma db seed
+```
+
+الـ seed يضيف مواقع النقل البري في المملكة وحساب مدير افتراضي:
+
+- البريد: `admin@gulfcontainer.com`
+- كلمة المرور: `Admin123!`
+
+### 4. NextAuth
+
+أضف في `.env`:
+
+```
+AUTH_SECRET=your-secret
+```
+
+ولتوليد سر آمن:
+
+```bash
+npx auth secret
+```
+
+### 5. تشغيل التطبيق
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+افتح [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## هيكل الحسابات والصلاحيات
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| النوع      | التسجيل | الوظيفة |
+|-----------|---------|---------|
+| شركة      | نعم     | إنشاء طلبات نقل، اختيار سائق، عرض طلباتها (بدون بيانات تواصل السائق) |
+| سائق      | نعم     | استلام الطلبات، قبول/رفض، عرض طلباته (بدون بيانات تواصل الشركة) |
+| إدارة / مشرف | لا (عبر الـ seed أو سكربت) | عرض كل الطلبات وبيانات التواصل، تحديث الحالة، حذف الطلبات المنتهية |
 
-## Learn More
+## أوامر مفيدة
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `npm run dev` — تشغيل وضع التطوير
+- `npm run build` — بناء المشروع
+- `npm run db:generate` — توليد Prisma Client
+- `npm run db:push` — دفع المخطط إلى قاعدة البيانات
+- `npm run db:seed` — بذر المواقع والمدير الافتراضي
