@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { auth } from "@/auth-edge";
 
 const roleRoutes: Record<string, string> = {
   COMPANY: "/dashboard/company",
