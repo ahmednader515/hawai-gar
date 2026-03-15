@@ -25,8 +25,8 @@ const NAV_BY_ROLE: Record<
     { href: "/dashboard/company/new-order", label: "انشاء طلب" },
   ],
   DRIVER: [
-    { href: "/dashboard/driver/requests", label: "الطلبات الواردة" },
-    { href: "/dashboard/driver/orders", label: "طلباتي" },
+    { href: "/dashboard/client/requests", label: "الطلبات الواردة" },
+    { href: "/dashboard/client/orders", label: "طلباتي" },
   ],
 };
 

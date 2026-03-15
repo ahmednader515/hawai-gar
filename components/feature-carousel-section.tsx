@@ -116,7 +116,7 @@ export function FeatureCarouselSection() {
         </h2>
         <p className="text-muted-foreground text-center max-w-3xl mx-auto text-sm sm:text-base leading-relaxed px-2">
           نحن نفخر بكوننا شريكاً للنقل البري للحاويات في المملكة، إذ نقدم حلولاً مصممة خصيصاً لتراعي
-          احتياجات كل شركة وسائق، مع تغطية واسعة للمدن والمحطات الجافة والطرق البرية.
+          احتياجات شركات الشحن (بين مواني ومدن المملكة والخليج) وشركات النقل، مع تغطية واسعة للمدن والمحطات الجافة والطرق البرية.
         </p>
       </div>
     </section>

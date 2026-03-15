@@ -2,7 +2,7 @@ import { auth } from "@/auth-edge";
 
 const roleRoutes: Record<string, string> = {
   COMPANY: "/dashboard/company",
-  DRIVER: "/dashboard/driver",
+  DRIVER: "/dashboard/client",
   ADMIN: "/dashboard/admin",
   SUPERVISOR: "/dashboard/supervisor",
 };

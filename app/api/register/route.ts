@@ -123,7 +123,7 @@ export async function POST(req: Request) {
         ok: true,
         userId: user.id,
         role: user.role,
-        redirect: "/dashboard/driver",
+        redirect: "/dashboard/client",
       });
     }
 

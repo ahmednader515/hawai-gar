@@ -9,7 +9,7 @@ export default async function DashboardPage() {
   if (role === "ADMIN") redirect("/dashboard/admin");
   if (role === "SUPERVISOR") redirect("/dashboard/supervisor");
   if (role === "COMPANY") redirect("/dashboard/company");
-  if (role === "DRIVER") redirect("/dashboard/driver");
+  if (role === "DRIVER") redirect("/dashboard/client");
 
   redirect("/login");
 }

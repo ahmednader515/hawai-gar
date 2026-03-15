@@ -107,9 +107,14 @@ export function RegisterForm() {
     }
   }
 
+  const roleLabels: Record<Role, string> = {
+    COMPANY: "الشركات (الشحن بين مواني ومدن المملكة والخليج العربي)",
+    DRIVER: "تسجيل العملاء (شركات النقل)",
+  };
+
   if (step === 1) {
     return (
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-md">
         <h2 className="text-lg font-semibold text-foreground mb-5">الخطوة ١: بيانات الدخول ونوع الحساب</h2>
         <form
           onSubmit={(e) => {
@@ -150,12 +155,20 @@ export function RegisterForm() {
           <div className="space-y-2">
             <Label>نوع الحساب</Label>
             <Select value={role} onValueChange={(v) => setRole(v as Role)} required>
-              <SelectTrigger className={inputClass}>
-                <SelectValue placeholder="اختر نوع الحساب" />
+              <SelectTrigger
+                className={`${inputClass} w-full min-w-0 [&_[data-slot=select-value]]:line-clamp-none [&_[data-slot=select-value]]:whitespace-normal`}
+              >
+                <SelectValue placeholder="اختر نوع الحساب">
+                  {role ? roleLabels[role] : null}
+                </SelectValue>
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="COMPANY">شركة (نقل بضائع)</SelectItem>
-                <SelectItem value="DRIVER">سائق (نقل حاويات)</SelectItem>
+              <SelectContent className="min-w-[var(--anchor-width)] max-w-[min(24rem,90vw)]">
+                <SelectItem value="COMPANY" className="whitespace-normal py-2">
+                  الشركات (الشحن بين مواني ومدن المملكة والخليج العربي)
+                </SelectItem>
+                <SelectItem value="DRIVER" className="whitespace-normal py-2">
+                  تسجيل العملاء (شركات النقل)
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -175,7 +188,7 @@ export function RegisterForm() {
       <h2 className="text-lg font-semibold text-foreground mb-5">
         {role === "COMPANY"
           ? "الخطوة ٢: بيانات الشركة"
-          : "الخطوة ٢: بيانات السائق والمركبة"}
+          : "الخطوة ٢: بيانات العميل (شركة النقل) والمركبة"}
       </h2>
       <form onSubmit={onSubmit} className="space-y-4">
           {role === "COMPANY" && (

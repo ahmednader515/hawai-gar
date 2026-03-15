@@ -5,7 +5,7 @@ import { SessionProvider } from "@/components/providers/session-provider";
 
 export const metadata: Metadata = {
   title: "hawai GAR",
-  description: "ربط الشركات بسائقي النقل البري في المملكة العربية السعودية",
+  description: "ربط شركات الشحن (بين مواني ومدن المملكة والخليج) بشركات النقل في المملكة العربية السعودية",
 };
 
 export default function RootLayout({

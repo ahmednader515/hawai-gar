@@ -5,19 +5,19 @@ import { usePathname } from "next/navigation";
 import { Inbox, ClipboardList } from "lucide-react";
 
 const links = [
-  { href: "/dashboard/driver/requests", label: "الطلبات الواردة", icon: Inbox },
-  { href: "/dashboard/driver/orders", label: "طلباتي", icon: ClipboardList },
+  { href: "/dashboard/client/requests", label: "الطلبات الواردة", icon: Inbox },
+  { href: "/dashboard/client/orders", label: "طلباتي", icon: ClipboardList },
 ];
 
-export function DriverSidebar() {
+export function ClientSidebar() {
   const pathname = usePathname();
 
   return (
     <aside className="w-full max-w-[100vw] min-w-0 shrink-0 flex flex-row border-b border-border bg-card md:w-64 md:flex-col md:h-full md:min-h-0 md:overflow-hidden md:overflow-y-hidden md:border-b-0 md:border-l overflow-hidden">
       {links.flatMap((link, index) => {
         const isActive =
-          link.href === "/dashboard/driver/requests"
-            ? pathname === "/dashboard/driver" || pathname === "/dashboard/driver/requests" || pathname.startsWith("/dashboard/driver/requests/")
+          link.href === "/dashboard/client/requests"
+            ? pathname === "/dashboard/client" || pathname === "/dashboard/client/requests" || pathname.startsWith("/dashboard/client/requests/")
             : pathname === link.href || pathname.startsWith(link.href + "/");
         const Icon = link.icon;
         return [

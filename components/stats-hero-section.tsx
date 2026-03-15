@@ -27,7 +27,7 @@ const STATS = [
       </svg>
     ),
     value: "100+",
-    label: "سائق معتمد على المنصة",
+    label: "شركة نقل معتمدة على المنصة",
   },
   {
     icon: (
@@ -59,15 +59,15 @@ export function StatsHeroSection() {
       {/* Central text block */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-3 sm:px-4 py-12 sm:py-16 md:py-24 text-center">
         <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white max-w-4xl mx-auto mb-4 sm:mb-6 drop-shadow-lg leading-tight px-2">
-          نربط الشركات بالسائقين في أنحاء المملكة
+          نربط شركات الشحن بشركات النقل في أنحاء المملكة والخليج
         </h2>
         <div className="w-24 h-1 bg-amber-400 rounded-full mb-6 sm:mb-8" />
         <p className="text-white/95 text-sm sm:text-base md:text-lg max-w-2xl mx-auto leading-relaxed mb-8 sm:mb-10 drop-shadow-md px-2">
-          طورنا منصتنا لربط الشركات الراغبة بنقل بضائعها بسائقي النقل البري المعتمدين. نحرص على توفير
+          طورنا منصتنا لربط الشركات (الشحن بين مواني ومدن المملكة والخليج العربي) بشركات النقل المعتمدة. نحرص على توفير
           خدمة موثوقة يمكنكم الاعتماد عليها لتلبية احتياجاتكم من نقل الحاويات براً بين المدن والمحطات الجافة.
         </p>
         <Link
-          href="/#solutions"
+          href="/news"
           className="inline-flex items-center gap-2 rounded-full border-2 border-amber-400 bg-transparent px-5 py-2.5 sm:px-6 sm:py-3 text-white text-sm sm:text-base font-medium hover:bg-amber-400/20 transition-colors touch-manipulation"
         >
           <span>معرفة المزيد عن hawai GAR</span>
@@ -75,6 +75,19 @@ export function StatsHeroSection() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </Link>
+        <p className="text-white/90 text-sm sm:text-base mt-10 sm:mt-12 mb-4 drop-shadow-md">
+          بالتعاون مع
+        </p>
+        <div className="relative w-full max-w-md mx-auto h-16 sm:h-20 md:h-24 px-6 py-4 bg-white rounded-xl shadow-lg">
+          <Image
+            src="/logisti.png"
+            alt="شركاؤنا"
+            fill
+            className="object-contain p-2"
+            sizes="(max-width: 768px) 100vw, 448px"
+            priority={false}
+          />
+        </div>
       </div>
 
       {/* Stats row at bottom */}
