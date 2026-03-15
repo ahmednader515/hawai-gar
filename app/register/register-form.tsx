@@ -1,17 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const inputClass =
   "h-11 bg-sky-50/80 dark:bg-sky-950/20 border-gray-200 focus:ring-amber-500/30 focus:border-amber-500";
@@ -23,10 +16,19 @@ const btnOutline =
 type Role = "COMPANY" | "DRIVER";
 
 export function RegisterForm() {
+  const searchParams = useSearchParams();
+  const typeParam = searchParams.get("type");
+  const initialRoleFromUrl = useMemo<Role | "">(
+    () => (typeParam === "company" ? "COMPANY" : typeParam === "carrier" ? "DRIVER" : ""),
+    [typeParam]
+  );
   const [step, setStep] = useState<1 | 2>(1);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<Role | "">("");
+  const [role, setRole] = useState<Role | "">(initialRoleFromUrl);
+  useEffect(() => {
+    if (initialRoleFromUrl) setRole(initialRoleFromUrl);
+  }, [initialRoleFromUrl]);
   const [name, setName] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [commercialRegister, setCommercialRegister] = useState("");
@@ -154,23 +156,30 @@ export function RegisterForm() {
           </div>
           <div className="space-y-2">
             <Label>نوع الحساب</Label>
-            <Select value={role} onValueChange={(v) => setRole(v as Role)} required>
-              <SelectTrigger
-                className={`${inputClass} w-full min-w-0 [&_[data-slot=select-value]]:line-clamp-none [&_[data-slot=select-value]]:whitespace-normal`}
+            <div className="grid grid-cols-1 gap-3" role="group" aria-label="نوع الحساب">
+              <button
+                type="button"
+                onClick={() => setRole("COMPANY")}
+                className={`w-full text-right rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors ${
+                  role === "COMPANY"
+                    ? "border-slate-600 bg-slate-600 text-white"
+                    : "border-gray-200 bg-white text-foreground hover:border-slate-400 hover:bg-slate-50"
+                }`}
               >
-                <SelectValue placeholder="اختر نوع الحساب">
-                  {role ? roleLabels[role] : null}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="min-w-[var(--anchor-width)] max-w-[min(24rem,90vw)]">
-                <SelectItem value="COMPANY" className="whitespace-normal py-2">
-                  الشركات (الشحن بين مواني ومدن المملكة والخليج العربي)
-                </SelectItem>
-                <SelectItem value="DRIVER" className="whitespace-normal py-2">
-                  تسجيل العملاء (شركات النقل)
-                </SelectItem>
-              </SelectContent>
-            </Select>
+                {roleLabels.COMPANY}
+              </button>
+              <button
+                type="button"
+                onClick={() => setRole("DRIVER")}
+                className={`w-full text-right rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors ${
+                  role === "DRIVER"
+                    ? "border-slate-600 bg-slate-600 text-white"
+                    : "border-gray-200 bg-white text-foreground hover:border-slate-400 hover:bg-slate-50"
+                }`}
+              >
+                {roleLabels.DRIVER}
+              </button>
+            </div>
           </div>
           {error && (
             <p className="text-sm text-red-600 bg-red-50 dark:bg-red-950/30 px-3 py-2 rounded-lg">{error}</p>

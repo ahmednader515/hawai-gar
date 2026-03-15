@@ -168,3 +168,8 @@ model CustomerAdvisory {
 
   @@index([publishedAt])
 }
+
+model SiteSetting {
+  key   String @id
+  value String
+}

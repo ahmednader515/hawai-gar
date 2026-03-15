@@ -8,15 +8,18 @@ import { StatsHeroSection } from "@/components/stats-hero-section";
 import { NewsSection } from "@/components/news-section";
 import { CustomerGuidelinesSection } from "@/components/customer-guidelines-section";
 import { prisma } from "@/lib/db";
+import { getHeroContact } from "@/lib/site-settings";
 
 export default async function Home() {
   const session = await auth();
   let newsItems: Awaited<ReturnType<typeof prisma.newsItem.findMany>> = [];
   let advisories: Awaited<ReturnType<typeof prisma.customerAdvisory.findMany>> = [];
+  let heroContact = { email: "info@hawajgar.com", phone: null as string | null };
   try {
-    [newsItems, advisories] = await Promise.all([
+    [newsItems, advisories, heroContact] = await Promise.all([
       prisma.newsItem.findMany({ orderBy: { publishedAt: "desc" }, take: 10 }),
       prisma.customerAdvisory.findMany({ orderBy: { publishedAt: "desc" }, take: 20 }),
+      getHeroContact(),
     ]);
   } catch {
     // Tables may not exist yet before migration; use placeholder in sections
@@ -24,7 +27,11 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen overflow-x-hidden">
-      <HeroSection isLoggedIn={!!session?.user} />
+      <HeroSection
+        isLoggedIn={!!session?.user}
+        contactEmail={heroContact.email}
+        contactPhone={heroContact.phone}
+      />
       <SolutionsSection />
       <FeatureCarouselSection />
       <StatsHeroSection />

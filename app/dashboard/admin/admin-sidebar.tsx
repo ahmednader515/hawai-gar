@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardList, Newspaper, BookOpen } from "lucide-react";
+import { ClipboardList, Newspaper, BookOpen, Mail } from "lucide-react";
 
 const links = [
   { href: "/dashboard/admin", label: "الطلبات", icon: ClipboardList },
   { href: "/dashboard/admin/news", label: "الأخبار", icon: Newspaper },
   { href: "/dashboard/admin/advisories", label: "الارشادات", icon: BookOpen },
+  { href: "/dashboard/admin/contact", label: "معلومات التواصل", icon: Mail },
 ];
 
 export function AdminSidebar() {
@@ -19,7 +20,9 @@ export function AdminSidebar() {
         const isActive =
           link.href === "/dashboard/admin"
             ? pathname === "/dashboard/admin" || pathname.startsWith("/dashboard/admin/orders")
-            : pathname === link.href || pathname.startsWith(link.href + "/");
+            : link.href === "/dashboard/admin/contact"
+              ? pathname === "/dashboard/admin/contact"
+              : pathname === link.href || pathname.startsWith(link.href + "/");
         const Icon = link.icon;
         return [
           index > 0 ? (

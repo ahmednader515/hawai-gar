@@ -75,19 +75,6 @@ export function StatsHeroSection() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </Link>
-        <p className="text-white/90 text-sm sm:text-base mt-10 sm:mt-12 mb-4 drop-shadow-md">
-          بالتعاون مع
-        </p>
-        <div className="relative w-full max-w-md mx-auto h-16 sm:h-20 md:h-24 px-6 py-4 bg-white rounded-xl shadow-lg">
-          <Image
-            src="/logisti.png"
-            alt="شركاؤنا"
-            fill
-            className="object-contain p-2"
-            sizes="(max-width: 768px) 100vw, 448px"
-            priority={false}
-          />
-        </div>
       </div>
 
       {/* Stats row at bottom */}
