@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { Suspense } from "react";
 import { RegisterForm } from "./register-form";
 
 export default function RegisterPage() {
@@ -28,7 +29,9 @@ export default function RegisterPage() {
             إنشاء حساب جديد
           </h1>
           <div className="w-20 h-1 bg-amber-500 rounded-full mb-6 sm:mb-8" />
-          <RegisterForm />
+          <Suspense fallback={<div className="w-full max-w-md h-64 bg-gray-100 animate-pulse rounded-lg" />}>
+            <RegisterForm />
+          </Suspense>
           <p className="mt-6 text-center text-muted-foreground text-sm shrink-0">
             لديك حساب؟{" "}
             <Link
