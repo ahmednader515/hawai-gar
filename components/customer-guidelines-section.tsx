@@ -55,12 +55,18 @@ const PLACEHOLDER_ADVISORIES: CustomerAdvisoryType[] = [
   },
 ];
 
-function formatDate(d: Date) {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(d);
+function formatDate(d: unknown) {
+  const date = d instanceof Date ? d : new Date(d as any);
+  if (Number.isNaN(date.getTime())) return "—";
+  try {
+    return new Intl.DateTimeFormat("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(date);
+  } catch {
+    return "—";
+  }
 }
 
 export function CustomerGuidelinesSection({
