@@ -29,6 +29,27 @@ export function NewOrderForm() {
   const [error, setError] = useState("");
   const router = useRouter();
 
+  const refreshDrivers = async (from: string, to: string) => {
+    if (!from || !to) return;
+    setLoadingDrivers(true);
+    setDriverId("");
+    try {
+      const res = await fetch(`/api/drivers/available?from=${from}&to=${to}`);
+      const data = await res.json();
+      if (data?.error) {
+        setError(String(data.error));
+        setDrivers([]);
+      } else {
+        setDrivers(Array.isArray(data) ? data : []);
+        setError("");
+      }
+    } catch {
+      setDrivers([]);
+    } finally {
+      setLoadingDrivers(false);
+    }
+  };
+
   useEffect(() => {
     fetch("/api/locations")
       .then((r) => r.json())
@@ -39,36 +60,10 @@ export function NewOrderForm() {
       .catch(() => setLoadingLocations(false));
   }, []);
 
-  useEffect(() => {
-    if (!fromId || !toId) {
-      setDrivers([]);
-      setDriverId("");
-      return;
-    }
-    setLoadingDrivers(true);
-    setDriverId("");
-    fetch(`/api/drivers/available?from=${fromId}&to=${toId}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.error) {
-          setError(data.error);
-          setDrivers([]);
-        } else {
-          setDrivers(data);
-          setError("");
-        }
-        setLoadingDrivers(false);
-      })
-      .catch(() => {
-        setDrivers([]);
-        setLoadingDrivers(false);
-      });
-  }, [fromId, toId]);
-
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!fromId || !toId || !driverId) {
-      setError("يرجى اختيار نقطة الانطلاق والوصول والسائق");
+      setError("يرجى اختيار نقطة الانطلاق والوصول وشركة النقل");
       return;
     }
     setSubmitting(true);
@@ -124,7 +119,7 @@ export function NewOrderForm() {
       <Card className="border border-border overflow-hidden">
         <CardHeader className="pb-3 border-b border-border bg-muted/30">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/15 text-primary">
               <MapPin className="w-4 h-4" aria-hidden />
             </div>
             <div>
@@ -137,7 +132,19 @@ export function NewOrderForm() {
           <div className="grid gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <Label className="text-foreground">من (نقطة الانطلاق)</Label>
-              <Select value={fromId} onValueChange={(v) => setFromId(v ?? "")} required>
+              <Select
+                value={fromId}
+                onValueChange={(v) => {
+                  const nextFrom = v ?? "";
+                  setFromId(nextFrom);
+                  setDrivers([]);
+                  setDriverId("");
+                  setError("");
+                  setLoadingDrivers(false);
+                  if (nextFrom && toId) refreshDrivers(nextFrom, toId);
+                }}
+                required
+              >
                 <SelectTrigger className="h-10 w-full">
                   <SelectValue placeholder="اختر الموقع">
                     {fromId ? locations.find((l) => l.id === fromId)?.nameAr : null}
@@ -154,7 +161,19 @@ export function NewOrderForm() {
             </div>
             <div className="space-y-2">
               <Label className="text-foreground">إلى (نقطة الوصول)</Label>
-              <Select value={toId} onValueChange={(v) => setToId(v ?? "")} required>
+              <Select
+                value={toId}
+                onValueChange={(v) => {
+                  const nextTo = v ?? "";
+                  setToId(nextTo);
+                  setDrivers([]);
+                  setDriverId("");
+                  setError("");
+                  setLoadingDrivers(false);
+                  if (fromId && nextTo) refreshDrivers(fromId, nextTo);
+                }}
+                required
+              >
                 <SelectTrigger className="h-10 w-full">
                   <SelectValue placeholder="اختر الموقع">
                     {toId ? locations.find((l) => l.id === toId)?.nameAr : null}
@@ -191,28 +210,28 @@ export function NewOrderForm() {
                 <User className="w-4 h-4" aria-hidden />
               </div>
               <div>
-                <h2 className="font-semibold text-foreground">اختيار السائق</h2>
-                <p className="text-xs text-muted-foreground">السائقون المتاحون لهذه الرحلة</p>
+                <h2 className="font-semibold text-foreground">اختيار شركة النقل</h2>
+                <p className="text-xs text-muted-foreground">شركات النقل المتاحة لهذه الرحلة</p>
               </div>
             </div>
           </CardHeader>
           <CardContent className="pt-6">
             <div className="space-y-2">
-              <Label className="text-foreground">السائق</Label>
+              <Label className="text-foreground">شركة النقل</Label>
               {loadingDrivers ? (
                 <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-8 justify-center">
                   <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" aria-hidden />
-                  <p className="text-sm text-muted-foreground">جاري تحميل السائقين...</p>
+                  <p className="text-sm text-muted-foreground">جاري تحميل شركات النقل...</p>
                 </div>
               ) : drivers.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-border bg-muted/20 px-4 py-8 text-center">
-                  <p className="text-sm text-muted-foreground">لا يوجد سائقون متاحون لهذه الرحلة</p>
+                  <p className="text-sm text-muted-foreground">لا يوجد شركات نقل متاحة لهذه الرحلة</p>
                   <p className="text-xs text-muted-foreground mt-1">جرّب تغيير نقطة الانطلاق أو الوصول</p>
                 </div>
               ) : (
                 <Select value={driverId} onValueChange={(v) => setDriverId(v ?? "")} required>
                   <SelectTrigger className="h-11 w-full">
-                    <SelectValue placeholder="اختر السائق">
+                    <SelectValue placeholder="اختر شركة النقل">
                       {selectedDriverLabel}
                     </SelectValue>
                   </SelectTrigger>

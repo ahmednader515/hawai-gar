@@ -28,7 +28,7 @@ export default function RegisterPage() {
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground text-center mb-2 shrink-0">
             إنشاء حساب جديد
           </h1>
-          <div className="w-20 h-1 bg-amber-500 rounded-full mb-6 sm:mb-8" />
+          <div className="w-20 h-1 bg-primary rounded-full mb-6 sm:mb-8" />
           <Suspense fallback={<div className="w-full max-w-md h-64 bg-gray-100 animate-pulse rounded-lg" />}>
             <RegisterForm />
           </Suspense>

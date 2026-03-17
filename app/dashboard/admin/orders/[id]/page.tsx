@@ -8,7 +8,7 @@ import { OrderAdminActions } from "./order-admin-actions";
 
 const statusLabels: Record<string, string> = {
   PENDING_APPROVAL: "في انتظار موافقة الإدارة",
-  PENDING_DRIVER: "في انتظار رد السائق",
+  PENDING_DRIVER: "في انتظار رد شركة النقل",
   ACCEPTED: "مقبول",
   IN_PROGRESS: "قيد التنفيذ",
   DONE: "منتهي",
@@ -113,7 +113,7 @@ export default async function AdminOrderDetailPage({
 
         <Card>
           <CardHeader>
-            <h2 className="font-semibold">بيانات السائق (للاتصال)</h2>
+            <h2 className="font-semibold">بيانات شركة النقل (للاتصال)</h2>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             {driverProfile ? (

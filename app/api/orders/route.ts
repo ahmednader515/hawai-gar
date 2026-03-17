@@ -120,7 +120,7 @@ export async function POST(req: Request) {
   const { fromLocationId, toLocationId, driverId } = body;
   if (!fromLocationId || !toLocationId || !driverId) {
     return NextResponse.json(
-      { error: "نقطة الانطلاق والوصول والسائق مطلوبون" },
+      { error: "نقطة الانطلاق والوصول وشركة النقل مطلوبة" },
       { status: 400 }
     );
   }

@@ -77,7 +77,7 @@ export default async function AdvisoriesPage() {
         <h1 className="text-2xl md:text-3xl font-bold text-center text-foreground mb-2">
           إرشادات للعملاء
         </h1>
-        <div className="w-24 h-0.5 bg-amber-500 mx-auto mb-12" />
+        <div className="w-24 h-0.5 bg-primary mx-auto mb-12" />
 
         <div className="max-w-4xl mx-auto space-y-4">
           {list.map((item) => (

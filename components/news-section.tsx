@@ -79,12 +79,12 @@ export function NewsSection({
   const list = (items ?? PLACEHOLDER_NEWS).slice(0, maxItems);
 
   return (
-    <section id="news" className="py-12 sm:py-16 md:py-24 bg-background overflow-hidden">
+    <section id="news" className="pt-0 pb-12 sm:pb-16 md:pb-24 bg-background overflow-hidden">
       <div className="container mx-auto px-4">
         <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-center text-foreground mb-2 px-2">
           اكتشف آخر الأخبار عن hawai GAR
         </h2>
-        <div className="w-24 h-0.5 bg-amber-500 mx-auto mb-8 sm:mb-12" />
+        <div className="w-24 h-0.5 bg-primary mx-auto mb-8 sm:mb-12" />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {list.map((item) => (
@@ -103,7 +103,7 @@ export function NewsSection({
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
               </div>
-              <span className="absolute top-3 right-3 z-10 rounded-full bg-amber-500 px-3 py-1 text-xs font-medium text-foreground">
+              <span className="absolute top-3 right-3 z-10 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">
                 {item.category}
               </span>
               <div className="absolute bottom-0 left-0 right-0 z-10 p-4 md:p-5 text-white">
@@ -113,9 +113,9 @@ export function NewsSection({
                 <h3 className="font-bold text-base md:text-lg leading-snug mb-3 line-clamp-3">
                   {item.titleAr}
                 </h3>
-                <span className="inline-flex items-center gap-1 text-sm font-medium text-amber-400">
+                <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
                   معرفة المزيد
-                  <span className="w-6 h-6 rounded-full border border-amber-400 flex items-center justify-center">
+                  <span className="w-6 h-6 rounded-full border border-primary flex items-center justify-center">
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
@@ -130,7 +130,7 @@ export function NewsSection({
           <div className="flex justify-center mt-8 sm:mt-10">
             <Link
               href="/news"
-              className="inline-flex items-center gap-2 rounded-full border-2 border-amber-500 bg-transparent px-5 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base text-foreground font-medium hover:bg-amber-500/10 transition-colors touch-manipulation"
+              className="inline-flex items-center gap-2 rounded-full border-2 border-primary bg-transparent px-5 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base text-foreground font-medium hover:bg-primary/10 transition-colors touch-manipulation"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />

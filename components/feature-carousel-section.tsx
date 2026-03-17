@@ -31,7 +31,7 @@ export function FeatureCarouselSection() {
   const goNext = () => setActiveIndex((i) => (i === CAROUSEL_SLIDES.length - 1 ? 0 : i + 1));
 
   return (
-    <section id="carousel" className="bg-background mt-12 sm:mt-16 md:mt-20">
+    <section id="carousel" className="bg-background mt-0">
       {/* Two-column carousel block with arrows outside */}
       <div className="container mx-auto max-w-6xl px-3 sm:px-4 md:px-4">
         <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
@@ -61,7 +61,7 @@ export function FeatureCarouselSection() {
                 <div className="absolute inset-0 bg-foreground/20" />
               </div>
               {/* Below image on mobile, right on desktop: content block (light yellow/beige) */}
-              <div className="relative order-2 md:order-2 flex flex-col justify-center p-5 sm:p-6 md:p-10 bg-amber-50/90 dark:bg-amber-950/20 border-s border-border">
+              <div className="relative order-2 md:order-2 flex flex-col justify-center p-5 sm:p-6 md:p-10 bg-primary/10 dark:bg-primary/10 border-s border-border">
                 <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground mb-3 sm:mb-4 leading-snug">
                   {slide.title}
                 </h2>
@@ -73,7 +73,7 @@ export function FeatureCarouselSection() {
                   className="inline-flex items-center gap-1 text-foreground font-medium text-sm hover:underline mt-auto"
                 >
                   معرفة المزيد
-                  <span className="text-amber-600" aria-hidden>»</span>
+                  <span className="text-primary" aria-hidden>»</span>
                 </Link>
               </div>
             </div>
@@ -100,7 +100,7 @@ export function FeatureCarouselSection() {
               onClick={() => setActiveIndex(i)}
               className={`w-2.5 h-2.5 rounded-full transition-all ${
                 i === activeIndex
-                  ? "bg-amber-500 scale-125"
+                  ? "bg-primary scale-125"
                   : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
               }`}
               aria-label={`الشريحة ${i + 1}`}

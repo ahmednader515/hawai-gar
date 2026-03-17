@@ -73,7 +73,7 @@ export function HeroContactForm({ initial }: { initial: HeroContactInfo }) {
           {message.text}
         </p>
       )}
-      <Button type="submit" disabled={saving} className="bg-amber-500 hover:bg-amber-600">
+      <Button type="submit" disabled={saving} className="bg-primary hover:bg-primary/90">
         {saving ? "جاري الحفظ..." : "حفظ"}
       </Button>
     </form>

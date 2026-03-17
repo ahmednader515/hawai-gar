@@ -67,10 +67,10 @@ export function SolutionsSection() {
   return (
     <section id="solutions" className="relative">
       {/* Header on solid background */}
-      <div className="bg-background py-10 sm:py-12 md:py-16">
+      <div className="bg-background pt-0 pb-10 sm:pb-12 md:pb-16">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-2 px-2">حلولنا</h2>
-          <div className="w-24 h-0.5 bg-amber-500 mx-auto mb-6 sm:mb-8" />
+          <div className="w-24 h-0.5 bg-primary mx-auto mb-6 sm:mb-8" />
           <p className="text-muted-foreground text-center max-w-3xl mx-auto text-sm sm:text-base md:text-lg leading-relaxed px-2">
             تقدم حلول النقل البري للحاويات في المملكة مع فرق متخصصة وخدمة متواصلة، نقل سريع وموثوق وحلول مصممة لاحتياجاتكم.
           </p>

@@ -53,7 +53,7 @@ export function LoginForm() {
             required
             placeholder="example@company.com"
             disabled={loading}
-            className="h-12 bg-sky-50/80 dark:bg-sky-950/20 border-gray-200 focus:ring-amber-500/30 focus:border-amber-500"
+            className="h-12 bg-sky-50/80 dark:bg-sky-950/20 border-gray-200 focus:ring-primary/30 focus:border-primary"
           />
         </div>
         <div className="space-y-2">
@@ -67,7 +67,7 @@ export function LoginForm() {
             onChange={(e) => setPassword(e.target.value)}
             required
             disabled={loading}
-            className="h-12 bg-sky-50/80 dark:bg-sky-950/20 border-gray-200 focus:ring-amber-500/30 focus:border-amber-500"
+            className="h-12 bg-sky-50/80 dark:bg-sky-950/20 border-gray-200 focus:ring-primary/30 focus:border-primary"
           />
         </div>
         {error && (
@@ -78,7 +78,7 @@ export function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full h-12 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+          className="w-full h-12 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
         >
           {loading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
         </button>

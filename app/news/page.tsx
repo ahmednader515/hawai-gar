@@ -35,7 +35,7 @@ const PLACEHOLDER_NEWS = [
     titleAr: "عودة الخدمات الموسمية للنقل المكثف",
     category: "خدمات النقل",
     imageUrl: "/land-shipping-4.png",
-    excerpt: "استعدادنا لفترة الذروة مع سائقين إضافيين",
+    excerpt: "استعدادنا لفترة الذروة مع شركات نقل إضافية",
     link: "#",
     publishedAt: new Date("2026-03-12"),
   },
@@ -78,7 +78,7 @@ export default async function NewsPage() {
         <h1 className="text-2xl md:text-3xl font-bold text-center text-foreground mb-2">
           آخر الأخبار
         </h1>
-        <div className="w-24 h-0.5 bg-amber-500 mx-auto mb-12" />
+        <div className="w-24 h-0.5 bg-primary mx-auto mb-12" />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {list.map((item) => (
@@ -97,7 +97,7 @@ export default async function NewsPage() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
               </div>
-              <span className="absolute top-3 right-3 z-10 rounded-full bg-amber-500 px-3 py-1 text-xs font-medium text-foreground">
+              <span className="absolute top-3 right-3 z-10 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">
                 {item.category}
               </span>
               <div className="absolute bottom-0 left-0 right-0 z-10 p-4 md:p-5 text-white">
@@ -110,9 +110,9 @@ export default async function NewsPage() {
                 {item.excerpt && (
                   <p className="text-sm text-white/80 line-clamp-2 mb-2">{item.excerpt}</p>
                 )}
-                <span className="inline-flex items-center gap-1 text-sm font-medium text-amber-400">
+                <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
                   معرفة المزيد
-                  <span className="w-6 h-6 rounded-full border border-amber-400 flex items-center justify-center">
+                  <span className="w-6 h-6 rounded-full border border-primary flex items-center justify-center">
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>

@@ -10,6 +10,37 @@ import { CustomerGuidelinesSection } from "@/components/customer-guidelines-sect
 import { prisma } from "@/lib/db";
 import { getHeroContact } from "@/lib/site-settings";
 
+function HomeSectionSeparator({ flip = true }: { flip?: boolean }) {
+  return (
+    <div className="relative w-full overflow-hidden bg-background m-0 p-0 block leading-[0]">
+      <div className="relative w-full h-10 sm:h-12 md:h-14">
+        <div className="absolute inset-0 flex">
+          <div className="relative w-1/2 h-full">
+            <Image
+              src="/Frame.png"
+              alt=""
+              fill
+              className={`object-contain ${flip ? "rotate-180" : ""}`}
+              sizes="50vw"
+              priority={false}
+            />
+          </div>
+          <div className="relative w-1/2 h-full">
+            <Image
+              src="/Frame.png"
+              alt=""
+              fill
+              className={`object-contain ${flip ? "rotate-180" : ""}`}
+              sizes="50vw"
+              priority={false}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default async function Home() {
   const session = await auth();
   let newsItems: Awaited<ReturnType<typeof prisma.newsItem.findMany>> = [];
@@ -32,10 +63,15 @@ export default async function Home() {
         contactEmail={heroContact.email}
         contactPhone={heroContact.phone}
       />
+      <HomeSectionSeparator />
       <SolutionsSection />
+      <HomeSectionSeparator />
       <FeatureCarouselSection />
+      <HomeSectionSeparator flip={false} />
       <StatsHeroSection />
+      <HomeSectionSeparator />
       <NewsSection items={newsItems.length > 0 ? newsItems : undefined} />
+      <HomeSectionSeparator flip={false} />
       <CustomerGuidelinesSection items={advisories.length > 0 ? advisories : undefined} />
 
       {/* Footer */}

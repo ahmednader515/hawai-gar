@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING_APPROVAL: "في انتظار موافقة الإدارة",
-  PENDING_DRIVER: "في انتظار رد السائق",
+  PENDING_DRIVER: "في انتظار رد شركة النقل",
   ACCEPTED: "مقبول",
   REFUSED: "مرفوض",
   IN_PROGRESS: "قيد التنفيذ",

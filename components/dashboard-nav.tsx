@@ -16,6 +16,7 @@ const NAV_BY_ROLE: Record<
     { href: "/dashboard/admin", label: "جميع الطلبات" },
     { href: "/dashboard/admin/news", label: "الأخبار" },
     { href: "/dashboard/admin/advisories", label: "إرشادات العملاء" },
+    { href: "/dashboard/admin/shipment-requests", label: "طلبات الشحن" },
     { href: "/dashboard/admin/contact", label: "معلومات التواصل" },
   ],
   SUPERVISOR: [
@@ -67,7 +68,10 @@ export function DashboardNav({
         aria-hidden={!sidebarOpen}
       >
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <span className="font-semibold text-foreground">القائمة</span>
+          <div className="min-w-0">
+            <div className="font-semibold text-foreground">القائمة</div>
+            {email && <div className="text-xs text-muted-foreground truncate mt-0.5">{email}</div>}
+          </div>
           <button
             type="button"
             className="p-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground active:scale-95 transition-transform"

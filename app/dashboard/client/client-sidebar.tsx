@@ -33,7 +33,7 @@ export function ClientSidebar() {
             href={link.href}
             className={`flex-1 flex items-center justify-center gap-2 px-2 py-3 text-center font-semibold text-sm transition-colors min-w-0 md:min-w-0 md:min-h-0 md:gap-3 md:px-4 md:py-0 md:text-lg md:w-full ${
               isActive
-                ? "bg-amber-600 text-white"
+                ? "bg-primary text-primary-foreground"
                 : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
             }`}
           >

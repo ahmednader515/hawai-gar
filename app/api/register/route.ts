@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     const r = role as string;
     if (r !== UserRole.COMPANY && r !== UserRole.DRIVER) {
       return NextResponse.json(
-        { error: "نوع الحساب يجب أن يكون شركة أو سائق" },
+        { error: "نوع الحساب يجب أن يكون شركة أو شركة نقل" },
         { status: 400 }
       );
     }
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
         return NextResponse.json(
           {
             error:
-              "الاسم الكامل والهاتف ورقم اللوحة مطلوبة لإنشاء حساب سائق",
+              "الاسم الكامل والهاتف ورقم اللوحة مطلوبة لإنشاء حساب شركة نقل",
           },
           { status: 400 }
         );

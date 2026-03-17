@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 const statusLabels: Record<string, string> = {
   PENDING_APPROVAL: "في انتظار موافقة الإدارة",
-  PENDING_DRIVER: "في انتظار رد السائق",
+  PENDING_DRIVER: "في انتظار رد شركة النقل",
   ACCEPTED: "مقبول",
   IN_PROGRESS: "قيد التنفيذ",
   DONE: "منتهي",
@@ -47,6 +47,7 @@ export default async function CompanyOrdersPage() {
   return (
     <div className="w-full min-w-0 max-w-full">
       <h1 className="text-2xl font-bold mb-6">طلباتي</h1>
+
       <Link
         href="/dashboard/company/new-order"
         className="mb-6 inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-sm font-medium hover:bg-muted"
@@ -72,7 +73,7 @@ export default async function CompanyOrdersPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground break-words">
-                  السائق: {o.driver?.driverProfile?.fullName ?? o.driver?.name ?? "—"} — لوحة{" "}
+                  شركة النقل: {o.driver?.driverProfile?.fullName ?? o.driver?.name ?? "—"} — لوحة{" "}
                   {o.driver?.driverProfile?.carPlate ?? "—"}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">

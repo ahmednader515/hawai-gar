@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useRef } from "react";
 import Link from "next/link";
 
 export type CustomerAdvisoryType = {
@@ -87,7 +87,7 @@ export function CustomerGuidelinesSection({
   };
 
   return (
-    <section id="advisories" className="py-12 sm:py-16 md:py-24 bg-muted/30 overflow-hidden">
+    <section id="advisories" className="pt-0 pb-12 sm:pb-16 md:pb-24 bg-muted/30 overflow-hidden">
       <div className="container mx-auto px-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground px-1">

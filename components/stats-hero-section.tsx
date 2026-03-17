@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 
 const STATS = [
@@ -43,16 +42,19 @@ const STATS = [
 export function StatsHeroSection() {
   return (
     <section id="about" className="relative min-h-[70vh] sm:min-h-[80vh] md:min-h-[85vh] flex flex-col justify-between overflow-hidden">
-      {/* Background image */}
+      {/* Background video */}
       <div className="absolute inset-0 z-0">
-        <Image
-          src="/land-shipping-6.png"
-          alt=""
-          fill
-          className="object-cover object-center"
-          sizes="100vw"
-          priority={false}
-        />
+        <video
+          className="absolute inset-0 h-full w-full object-cover object-center"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          poster="/land-shipping-6.png"
+        >
+          <source src="/video-2.mp4" type="video/mp4" />
+        </video>
         <div className="absolute inset-0 bg-foreground/60" />
       </div>
 
@@ -61,14 +63,14 @@ export function StatsHeroSection() {
         <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white max-w-4xl mx-auto mb-4 sm:mb-6 drop-shadow-lg leading-tight px-2">
           نربط شركات الشحن بشركات النقل في أنحاء المملكة والخليج
         </h2>
-        <div className="w-24 h-1 bg-amber-400 rounded-full mb-6 sm:mb-8" />
+        <div className="w-24 h-1 bg-primary rounded-full mb-6 sm:mb-8" />
         <p className="text-white/95 text-sm sm:text-base md:text-lg max-w-2xl mx-auto leading-relaxed mb-8 sm:mb-10 drop-shadow-md px-2">
           طورنا منصتنا لربط الشركات (الشحن بين مواني ومدن المملكة والخليج العربي) بشركات النقل المعتمدة. نحرص على توفير
           خدمة موثوقة يمكنكم الاعتماد عليها لتلبية احتياجاتكم من نقل الحاويات براً بين المدن والمحطات الجافة.
         </p>
         <Link
           href="/news"
-          className="inline-flex items-center gap-2 rounded-full border-2 border-amber-400 bg-transparent px-5 py-2.5 sm:px-6 sm:py-3 text-white text-sm sm:text-base font-medium hover:bg-amber-400/20 transition-colors touch-manipulation"
+          className="inline-flex items-center gap-2 rounded-full border-2 border-primary bg-transparent px-5 py-2.5 sm:px-6 sm:py-3 text-white text-sm sm:text-base font-medium hover:bg-primary/20 transition-colors touch-manipulation"
         >
           <span>معرفة المزيد عن hawai GAR</span>
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

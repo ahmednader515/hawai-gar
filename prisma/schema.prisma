@@ -173,3 +173,24 @@ model SiteSetting {
   key   String @id
   value String
 }
+
+model ShipmentRequest {
+  id              String   @id @default(cuid())
+  fromText        String
+  toText          String
+  containerSize   String?
+  containersCount String?
+  pickupDate      String?
+  notes           String?
+  phone           String?
+  status          String   @default("PENDING_CARRIER")
+  carrierId       String?
+  carrierDecisionAt DateTime?
+  adminId         String?
+  adminDecisionAt DateTime?
+  createdAt       DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([status])
+  @@index([carrierId])
+}

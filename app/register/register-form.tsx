@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const inputClass =
-  "h-11 bg-sky-50/80 dark:bg-sky-950/20 border-gray-200 focus:ring-amber-500/30 focus:border-amber-500";
+  "h-11 bg-sky-50/80 dark:bg-sky-950/20 border-gray-200 focus:ring-primary/30 focus:border-primary";
 const btnPrimary =
-  "h-11 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold transition-colors disabled:opacity-70 disabled:cursor-not-allowed";
+  "h-11 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold transition-colors disabled:opacity-70 disabled:cursor-not-allowed";
 const btnOutline =
   "h-11 rounded-lg border-2 border-gray-200 bg-white text-foreground font-medium hover:bg-gray-50 hover:border-gray-300 transition-colors disabled:opacity-70";
 
@@ -26,10 +26,6 @@ export function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<Role | "">(initialRoleFromUrl);
-  useEffect(() => {
-    if (initialRoleFromUrl) setRole(initialRoleFromUrl);
-  }, [initialRoleFromUrl]);
-  const [name, setName] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [commercialRegister, setCommercialRegister] = useState("");
   const [contactPerson, setContactPerson] = useState("");
@@ -57,7 +53,6 @@ export function RegisterForm() {
               email,
               password,
               role: "COMPANY",
-              name: name || undefined,
               companyName,
               commercialRegister: commercialRegister || undefined,
               contactPerson,
@@ -69,7 +64,7 @@ export function RegisterForm() {
               email,
               password,
               role: "DRIVER",
-              fullName: fullName || name,
+              fullName,
               phone,
               nationalId: nationalId || undefined,
               licenseNumber: licenseNumber || undefined,

@@ -36,7 +36,7 @@ const PLACEHOLDER_NEWS = [
     titleEn: "Seasonal high-volume transport services",
     category: "خدمات النقل",
     imageUrl: "/land-shipping-4.png",
-    excerpt: "استعدادنا لفترة الذروة مع سائقين إضافيين",
+    excerpt: "استعدادنا لفترة الذروة مع شركات نقل إضافية",
     link: "#",
     publishedAt: new Date("2026-03-12"),
   },

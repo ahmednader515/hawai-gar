@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 const statusLabels: Record<string, string> = {
   PENDING_APPROVAL: "في انتظار موافقة الإدارة",
-  PENDING_DRIVER: "في انتظار رد السائق",
+  PENDING_DRIVER: "في انتظار رد شركة النقل",
   ACCEPTED: "مقبول",
   IN_PROGRESS: "قيد التنفيذ",
   DONE: "منتهي",
@@ -75,7 +75,7 @@ export default async function SupervisorDashboardPage() {
               </CardHeader>
               <CardContent className="min-w-0 max-md:pt-1">
                 <p className="text-sm text-muted-foreground break-words max-md:text-base">
-                  الشركة: {o.company?.companyProfile?.companyName ?? "—"} — السائق:{" "}
+                  الشركة: {o.company?.companyProfile?.companyName ?? "—"} — شركة النقل:{" "}
                   {o.driver?.driverProfile?.fullName ?? o.driver?.name ?? "—"}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1 break-words max-md:text-sm">
