@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { MapboxLocationPicker, type PickedLocation } from "@/components/mapbox-location-picker";
 
 const MAIN_NAV_LINKS = [
   { href: "/", label: "الرئيسية" },
@@ -23,8 +24,8 @@ export function HeroSection({
   contactPhone?: string | null;
 }) {
   const [mode, setMode] = useState<"shipper" | null>(null);
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [fromLoc, setFromLoc] = useState<PickedLocation | null>(null);
+  const [toLoc, setToLoc] = useState<PickedLocation | null>(null);
   const [containerSize, setContainerSize] = useState<"20" | "40" | "">("");
   const [containersCount, setContainersCount] = useState("");
   const [pickupDate, setPickupDate] = useState("");
@@ -38,7 +39,9 @@ export function HeroSection({
 
   const submitShipmentRequest = async () => {
     setSubmitResult(null);
-    if (!from.trim() || !to.trim()) {
+    const from = fromLoc?.address?.trim() ?? "";
+    const to = toLoc?.address?.trim() ?? "";
+    if (!from || !to) {
       setSubmitResult({ ok: false, error: "الرجاء تعبئة حقلي «من» و«إلى»." });
       return;
     }
@@ -48,8 +51,8 @@ export function HeroSection({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: from.trim(),
-          to: to.trim(),
+          from,
+          to,
           containerSize: containerSize || null,
           containersCount: containersCount.trim() || null,
           pickupDate: pickupDate || null,
@@ -63,8 +66,8 @@ export function HeroSection({
         return;
       }
       setSubmitResult({ ok: true, id: String(data.id) });
-      setFrom("");
-      setTo("");
+      setFromLoc(null);
+      setToLoc(null);
       setContainerSize("");
       setContainersCount("");
       setPickupDate("");
@@ -277,25 +280,15 @@ export function HeroSection({
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">من</label>
-                <input
-                  value={from}
-                  onChange={(e) => setFrom(e.target.value)}
-                  placeholder="مثال: ميناء جدة / الرياض"
-                  className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">إلى</label>
-                <input
-                  value={to}
-                  onChange={(e) => setTo(e.target.value)}
-                  placeholder="مثال: الدمام / ميناء خليجي"
-                  className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                />
-              </div>
+            <div className="space-y-3">
+              <MapboxLocationPicker
+                valueFrom={fromLoc}
+                valueTo={toLoc}
+                onChangeFrom={setFromLoc}
+                onChangeTo={setToLoc}
+              />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground">حجم الحاوية</label>
                 <select
@@ -344,6 +337,7 @@ export function HeroSection({
                   placeholder="05xxxxxxxx"
                   className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
+              </div>
               </div>
             </div>
 
