@@ -87,8 +87,7 @@ export function HeroSection({
           muted
           loop
           playsInline
-          preload="metadata"
-          poster="/hero.png"
+          preload="none"
         >
           <source src="/video-1.mp4" type="video/mp4" />
         </video>

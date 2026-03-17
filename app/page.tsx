@@ -9,6 +9,20 @@ import { NewsSection } from "@/components/news-section";
 import { CustomerGuidelinesSection } from "@/components/customer-guidelines-section";
 import { prisma } from "@/lib/db";
 import { getHeroContact } from "@/lib/site-settings";
+import { unstable_cache } from "next/cache";
+
+const getHomeContent = unstable_cache(
+  async () => {
+    const [newsItems, advisories, heroContact] = await Promise.all([
+      prisma.newsItem.findMany({ orderBy: { publishedAt: "desc" }, take: 10 }),
+      prisma.customerAdvisory.findMany({ orderBy: { publishedAt: "desc" }, take: 20 }),
+      getHeroContact(),
+    ]);
+    return { newsItems, advisories, heroContact };
+  },
+  ["home-content-v1"],
+  { revalidate: 300 }
+);
 
 function HomeSectionSeparator({ flip = true }: { flip?: boolean }) {
   return (
@@ -47,11 +61,7 @@ export default async function Home() {
   let advisories: Awaited<ReturnType<typeof prisma.customerAdvisory.findMany>> = [];
   let heroContact = { email: "info@hawajgar.com", phone: null as string | null };
   try {
-    [newsItems, advisories, heroContact] = await Promise.all([
-      prisma.newsItem.findMany({ orderBy: { publishedAt: "desc" }, take: 10 }),
-      prisma.customerAdvisory.findMany({ orderBy: { publishedAt: "desc" }, take: 20 }),
-      getHeroContact(),
-    ]);
+    ({ newsItems, advisories, heroContact } = await getHomeContent());
   } catch {
     // Tables may not exist yet before migration; use placeholder in sections
   }

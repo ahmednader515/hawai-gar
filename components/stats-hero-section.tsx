@@ -50,8 +50,7 @@ export function StatsHeroSection() {
           muted
           loop
           playsInline
-          preload="metadata"
-          poster="/land-shipping-6.png"
+          preload="none"
         >
           <source src="/video-2.mp4" type="video/mp4" />
         </video>
