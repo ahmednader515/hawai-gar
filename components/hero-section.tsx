@@ -392,18 +392,28 @@ export function HeroSection({
           رواد في النقل البري والخدمات اللوجستية
         </h1>
 
-        <p className="text-white/90 text-sm sm:text-base -mt-2 mb-3 drop-shadow-md">
-          بالتعاون مع
-        </p>
-        <div className="relative w-full max-w-md mx-auto h-14 sm:h-16 md:h-20 px-6 py-3 bg-white rounded-xl shadow-lg mb-6 sm:mb-8">
-          <Image
-            src="/logisti.png"
-            alt="شركاؤنا"
-            fill
-            className="object-contain p-2"
-            sizes="(max-width: 768px) 100vw, 448px"
-            priority={false}
-          />
+        <div className="-mt-2 mb-6 sm:mb-8 flex flex-col items-center gap-3">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-white/90 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+            <span className="text-sm sm:text-base font-medium drop-shadow-sm">بالتعاون مع</span>
+            <span className="h-4 w-px bg-white/25" aria-hidden />
+            <span className="text-xs sm:text-sm text-white/80">LOGISTI</span>
+          </div>
+
+          <div className="relative w-full max-w-md mx-auto">
+            <div className="relative rounded-2xl p-[1px] bg-gradient-to-r from-white/30 via-white/10 to-white/30 shadow-[0_18px_55px_rgba(0,0,0,0.35)]">
+              <div className="relative h-14 sm:h-16 md:h-20 px-6 py-3 rounded-2xl bg-white border border-white/20 overflow-hidden">
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/5 to-transparent" />
+                <Image
+                  src="/logisti.png"
+                  alt="شركاؤنا"
+                  fill
+                  className="object-contain p-3"
+                  sizes="(max-width: 768px) 100vw, 448px"
+                  priority={false}
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 px-2 sm:px-0">
