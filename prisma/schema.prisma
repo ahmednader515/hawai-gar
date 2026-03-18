@@ -178,6 +178,14 @@ model ShipmentRequest {
   id              String   @id @default(cuid())
   fromText        String
   toText          String
+  companyId       String?
+  shipmentType    String   @default("أخرى")
+  fromLat         Float?
+  fromLng         Float?
+  toLat           Float?
+  toLng           Float?
+  distanceKm      Float?
+  priceSar        Float?
   containerSize   String?
   containersCount String?
   pickupDate      String?
@@ -193,4 +201,5 @@ model ShipmentRequest {
   @@index([createdAt])
   @@index([status])
   @@index([carrierId])
+  @@index([companyId])
 }

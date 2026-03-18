@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardList, Newspaper, BookOpen, Mail, Package } from "lucide-react";
+import { ClipboardList, Newspaper, BookOpen, Mail } from "lucide-react";
 
 const links = [
   { href: "/dashboard/admin", label: "الطلبات", icon: ClipboardList },
   { href: "/dashboard/admin/news", label: "الأخبار", icon: Newspaper },
   { href: "/dashboard/admin/advisories", label: "الارشادات", icon: BookOpen },
-  { href: "/dashboard/admin/shipment-requests", label: "طلبات الشحن", icon: Package },
   { href: "/dashboard/admin/contact", label: "معلومات التواصل", icon: Mail },
 ];
 

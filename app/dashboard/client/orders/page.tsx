@@ -2,6 +2,15 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Link from "next/link";
+import { MapboxLocationPreview } from "@/components/mapbox-location-preview";
+
+function formatSar(v: number) {
+  return new Intl.NumberFormat("ar-SA", {
+    style: "currency",
+    currency: "SAR",
+    maximumFractionDigits: 0,
+  }).format(v);
+}
 
 const statusLabels: Record<string, string> = {
   PENDING_APPROVAL: "في انتظار موافقة الإدارة",
@@ -88,6 +97,19 @@ export default async function ClientOrdersPage() {
                   <p className="text-sm text-muted-foreground break-words">
                     حجم الحاوية: {r.containerSize ?? "—"} — العدد: {r.containersCount ?? "—"}
                   </p>
+                  <p className="text-xs text-muted-foreground break-words">
+                    رقم الطلب: <span className="font-mono">{r.id}</span>
+                  </p>
+                  <p className="text-sm text-muted-foreground break-words">
+                    المسافة: {typeof r.distanceKm === "number" ? `${r.distanceKm.toFixed(1)} كم` : "—"}
+                  </p>
+                  <p className="text-sm text-muted-foreground break-words">
+                    {r.status === "ADMIN_APPROVED" ? "السعر النهائي" : "السعر التقديري"}:{" "}
+                    {typeof r.priceSar === "number" ? formatSar(r.priceSar) : "—"}
+                  </p>
+                  <p className="text-sm text-muted-foreground break-words">
+                    نوع الشحنة: {r.shipmentType ?? "—"}
+                  </p>
                   <p className="text-sm text-muted-foreground break-words">
                     تاريخ الاستلام: {r.pickupDate ?? "—"}
                   </p>
@@ -96,6 +118,18 @@ export default async function ClientOrdersPage() {
                       ملاحظات: {r.notes}
                     </p>
                   )}
+                  {r.fromLat != null &&
+                    r.fromLng != null &&
+                    r.toLat != null &&
+                    r.toLng != null && (
+                      <div className="mt-3">
+                        <MapboxLocationPreview
+                          from={{ lat: r.fromLat, lng: r.fromLng }}
+                          to={{ lat: r.toLat, lng: r.toLng }}
+                          heightClassName="h-28 sm:h-32"
+                        />
+                      </div>
+                    )}
                   <p className="text-xs text-muted-foreground pt-2">
                     الحالة: معتمد
                   </p>

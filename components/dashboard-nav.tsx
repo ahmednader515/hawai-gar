@@ -14,10 +14,6 @@ const NAV_BY_ROLE: Record<
 > = {
   ADMIN: [
     { href: "/dashboard/admin", label: "جميع الطلبات" },
-    { href: "/dashboard/admin/news", label: "الأخبار" },
-    { href: "/dashboard/admin/advisories", label: "إرشادات العملاء" },
-    { href: "/dashboard/admin/shipment-requests", label: "طلبات الشحن" },
-    { href: "/dashboard/admin/contact", label: "معلومات التواصل" },
   ],
   SUPERVISOR: [
     { href: "/dashboard/supervisor", label: "الطلبات" },

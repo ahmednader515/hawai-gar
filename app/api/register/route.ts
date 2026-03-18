@@ -85,7 +85,7 @@ export async function POST(req: Request) {
         ok: true,
         userId: user.id,
         role: user.role,
-        redirect: "/dashboard/company",
+        redirect: "/?openShipment=1",
       });
     }
 

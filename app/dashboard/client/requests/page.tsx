@@ -3,6 +3,23 @@ import { prisma } from "@/lib/db";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Link from "next/link";
 import { ShipmentRequestActions } from "./shipment-request-actions";
+import { MapboxLocationPreview } from "@/components/mapbox-location-preview";
+
+function formatSar(v: number) {
+  return new Intl.NumberFormat("ar-SA", {
+    style: "currency",
+    currency: "SAR",
+    maximumFractionDigits: 0,
+  }).format(v);
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  PENDING_CARRIER: "بانتظار قرار شركة النقل",
+  CARRIER_ACCEPTED: "بانتظار قرار الأدمن بقبول أو رفض الطلب",
+  CARRIER_REFUSED: "بانتظار قرار الأدمن بقبول أو رفض الطلب",
+  ADMIN_APPROVED: "تمت الموافقة النهائية",
+  ADMIN_REJECTED: "تم الرفض النهائي",
+};
 
 type RequestOrderRow = {
   id: string;
@@ -73,10 +90,23 @@ export default async function ClientRequestsPage() {
                 </CardHeader>
                 <CardContent className="space-y-1">
                   <p className="text-xs text-muted-foreground">
-                    الحالة: {r.status}
+                    الحالة: {STATUS_LABELS[r.status] ?? r.status}
+                  </p>
+                  <p className="text-xs text-muted-foreground break-words">
+                    رقم الطلب: <span className="font-mono">{r.id}</span>
                   </p>
                   <p className="text-sm text-muted-foreground break-words">
                     حجم الحاوية: {r.containerSize ?? "—"} — العدد: {r.containersCount ?? "—"}
+                  </p>
+                  <p className="text-sm text-muted-foreground break-words">
+                    المسافة: {typeof r.distanceKm === "number" ? `${r.distanceKm.toFixed(1)} كم` : "—"}
+                  </p>
+                  <p className="text-sm text-muted-foreground break-words">
+                    {r.status === "ADMIN_APPROVED" ? "السعر النهائي" : "السعر التقديري"}:{" "}
+                    {typeof r.priceSar === "number" ? formatSar(r.priceSar) : "—"}
+                  </p>
+                  <p className="text-sm text-muted-foreground break-words">
+                    نوع الشحنة: {r.shipmentType ?? "—"}
                   </p>
                   <p className="text-sm text-muted-foreground break-words">
                     تاريخ الاستلام: {r.pickupDate ?? "—"}
@@ -86,6 +116,28 @@ export default async function ClientRequestsPage() {
                       ملاحظات: {r.notes}
                     </p>
                   )}
+                  {r.fromLat != null &&
+                    r.fromLng != null &&
+                    r.toLat != null &&
+                    r.toLng != null && (
+                      <div className="mt-3">
+                        <MapboxLocationPreview
+                          from={{ lat: r.fromLat, lng: r.fromLng }}
+                          to={{ lat: r.toLat, lng: r.toLng }}
+                          heightClassName="h-28 sm:h-32"
+                        />
+                        <div className="mt-3 text-sm text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="inline-block w-3 h-3 rounded-sm bg-[#1b8254]" aria-hidden />
+                            من
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="inline-block w-3 h-3 rounded-sm bg-[#f59e0b]" aria-hidden />
+                            إلى
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   <ShipmentRequestActions id={r.id} status={r.status} />
                 </CardContent>
               </Card>

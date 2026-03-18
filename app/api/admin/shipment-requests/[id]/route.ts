@@ -16,6 +16,7 @@ export async function PATCH(
   try {
     const body = await req.json();
     const decision = String(body?.decision ?? "");
+    const priceSarRaw = body?.priceSar;
     if (decision !== "approve" && decision !== "reject") {
       return NextResponse.json({ error: "قرار غير صالح" }, { status: 400 });
     }
@@ -45,13 +46,28 @@ export async function PATCH(
     // Admin decision comes after carrier decision.
     const nextStatus = decision === "approve" ? "ADMIN_APPROVED" : "ADMIN_REJECTED";
 
+    const priceSarNum =
+      priceSarRaw == null || priceSarRaw === ""
+        ? null
+        : (() => {
+            const n = Number(priceSarRaw);
+            return Number.isFinite(n) ? n : null;
+          })();
+
+    const data: Record<string, unknown> = {
+      status: nextStatus,
+      adminId: session.user.id,
+      adminDecisionAt: new Date(),
+    };
+
+    // Only apply edited price when approving.
+    if (decision === "approve" && priceSarNum != null) {
+      data.priceSar = priceSarNum;
+    }
+
     const updated = await prisma.shipmentRequest.update({
       where: { id },
-      data: {
-        status: nextStatus,
-        adminId: session.user.id,
-        adminDecisionAt: new Date(),
-      },
+      data,
     });
 
     return NextResponse.json({ ok: true, request: updated });

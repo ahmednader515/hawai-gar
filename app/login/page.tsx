@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { LoginForm } from "./login-form";
 import Link from "next/link";
 import Image from "next/image";
+import { BackButton } from "@/components/back-button";
 
 export default async function LoginPage() {
   const session = await auth();
@@ -10,7 +11,7 @@ export default async function LoginPage() {
     const role = session.user.role;
     if (role === "ADMIN") redirect("/dashboard/admin");
     if (role === "SUPERVISOR") redirect("/dashboard/supervisor");
-    if (role === "COMPANY") redirect("/dashboard/company");
+    if (role === "COMPANY") redirect("/");
     if (role === "DRIVER") redirect("/dashboard/client");
     redirect("/dashboard");
   }
@@ -32,7 +33,10 @@ export default async function LoginPage() {
 
       {/* Right side in RTL = form panel */}
       <div className="flex flex-col bg-white min-h-screen">
-        <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10">
+        <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 relative">
+          <div className="absolute top-4 right-4">
+            <BackButton />
+          </div>
           <Link href="/" className="mb-8 sm:mb-10">
             <Image src="/logo.png" alt="hawai GAR" width={56} height={56} className="object-contain" />
           </Link>

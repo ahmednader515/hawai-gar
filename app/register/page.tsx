@@ -1,7 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Suspense } from "react";
-import { RegisterForm } from "./register-form";
+import { BackButton } from "@/components/back-button";
 
 export default function RegisterPage() {
   return (
@@ -21,7 +20,10 @@ export default function RegisterPage() {
 
       {/* Right side in RTL = form panel */}
       <div className="flex flex-col bg-white min-h-screen">
-        <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 overflow-auto">
+        <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 overflow-auto relative">
+          <div className="absolute top-4 right-4">
+            <BackButton />
+          </div>
           <Link href="/" className="mb-6 sm:mb-8 shrink-0">
             <Image src="/logo.png" alt="hawai GAR" width={56} height={56} className="object-contain" />
           </Link>
@@ -29,9 +31,25 @@ export default function RegisterPage() {
             إنشاء حساب جديد
           </h1>
           <div className="w-20 h-1 bg-primary rounded-full mb-6 sm:mb-8" />
-          <Suspense fallback={<div className="w-full max-w-md h-64 bg-gray-100 animate-pulse rounded-lg" />}>
-            <RegisterForm />
-          </Suspense>
+          <div className="w-full max-w-md space-y-4">
+            <Link
+              href="/register/company"
+              className="block w-full text-right rounded-xl border-2 border-gray-200 bg-white px-5 py-4 hover:border-primary hover:bg-primary/5 transition-colors"
+            >
+              <div className="font-bold text-foreground mb-1">
+                الشركات (الشحن بين مواني ومدن المملكة والخليج العربي)
+              </div>
+              <div className="text-sm text-muted-foreground">إنشاء حساب للشركات الراغبة في الشحن</div>
+            </Link>
+
+            <Link
+              href="/register/carrier"
+              className="block w-full text-right rounded-xl border-2 border-gray-200 bg-white px-5 py-4 hover:border-primary hover:bg-primary/5 transition-colors"
+            >
+              <div className="font-bold text-foreground mb-1">تسجيل العملاء (شركات النقل)</div>
+              <div className="text-sm text-muted-foreground">إنشاء حساب لشركات النقل لتلقي الطلبات</div>
+            </Link>
+          </div>
           <p className="mt-6 text-center text-muted-foreground text-sm shrink-0">
             لديك حساب؟{" "}
             <Link

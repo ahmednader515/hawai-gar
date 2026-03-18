@@ -70,6 +70,7 @@ export default async function Home() {
     <div className="min-h-screen overflow-x-hidden">
       <HeroSection
         isLoggedIn={!!session?.user}
+        userRole={session?.user?.role ?? null}
         contactEmail={heroContact.email}
         contactPhone={heroContact.phone}
       />
@@ -93,7 +94,11 @@ export default async function Home() {
           </div>
           <nav className="flex gap-4 sm:gap-6 text-sm text-muted-foreground">
             {session?.user ? (
-              <Link href="/dashboard" className="hover:underline touch-manipulation py-1 font-medium">لوحة التحكم</Link>
+              session.user.role !== "COMPANY" ? (
+                <Link href="/dashboard" className="hover:underline touch-manipulation py-1 font-medium">
+                  لوحة التحكم
+                </Link>
+              ) : null
             ) : (
               <>
                 <Link href="/login" className="hover:underline touch-manipulation py-1">تسجيل الدخول</Link>
