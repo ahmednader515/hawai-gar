@@ -186,6 +186,8 @@ model ShipmentRequest {
   toLng           Float?
   distanceKm      Float?
   priceSar        Float?
+  estimatedPriceSar Float?
+  adminPriceChanged Boolean @default(false)
   containerSize   String?
   containersCount String?
   pickupDate      String?

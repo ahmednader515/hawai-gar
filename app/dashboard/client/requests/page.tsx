@@ -39,6 +39,10 @@ export default async function ClientRequestsPage() {
     take: 50,
   });
 
+  const priceChangedApprovedCount = shipmentRequests.filter(
+    (r) => r.status === "ADMIN_APPROVED" && r.adminPriceChanged
+  ).length;
+
   const orders = await prisma.order.findMany({
     where: {
       driverId: session.user.id,
@@ -57,9 +61,20 @@ export default async function ClientRequestsPage() {
   });
 
   const rows = orders as unknown as RequestOrderRow[];
+  const hasAny = shipmentRequests.length > 0 || rows.length > 0;
 
   return (
     <div className="w-full min-w-0 max-w-full">
+      {priceChangedApprovedCount > 0 && (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-900 p-4 text-sm">
+          <div className="font-semibold">تنبيه: تم تعديل السعر بواسطة الأدمن</div>
+          <div className="mt-1 opacity-90">
+            يوجد {priceChangedApprovedCount}{" "}
+            {priceChangedApprovedCount === 1 ? "طلب" : "طلبات"} تم تعديل السعر فيها بعد اعتماد الأدمن.
+            راجع تفاصيل الطلب لمعرفة السعر النهائي.
+          </div>
+        </div>
+      )}
       <h1 className="text-2xl font-bold mb-6">الطلبات الواردة</h1>
 
       <div className="mb-8">
@@ -105,6 +120,16 @@ export default async function ClientRequestsPage() {
                     {r.status === "ADMIN_APPROVED" ? "السعر النهائي" : "السعر التقديري"}:{" "}
                     {typeof r.priceSar === "number" ? formatSar(r.priceSar) : "—"}
                   </p>
+                  {r.status === "ADMIN_APPROVED" &&
+                    r.adminPriceChanged &&
+                    typeof r.estimatedPriceSar === "number" &&
+                    typeof r.priceSar === "number" && (
+                      <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 p-3 text-sm">
+                        تم تعديل السعر بواسطة الأدمن من{" "}
+                        <span className="font-semibold">{formatSar(r.estimatedPriceSar)}</span> إلى{" "}
+                        <span className="font-semibold">{formatSar(r.priceSar)}</span>.
+                      </div>
+                    )}
                   <p className="text-sm text-muted-foreground break-words">
                     نوع الشحنة: {r.shipmentType ?? "—"}
                   </p>
@@ -146,9 +171,7 @@ export default async function ClientRequestsPage() {
         )}
       </div>
 
-      {rows.length === 0 ? (
-        <p className="text-muted-foreground">لا توجد طلبات مخصصة لك بانتظار موافقة الإدارة.</p>
-      ) : (
+      {rows.length === 0 ? null : (
         <div className="space-y-4">
           {rows.map((o) => (
             <Card key={o.id} className="min-w-0 overflow-hidden">
@@ -173,6 +196,8 @@ export default async function ClientRequestsPage() {
           ))}
         </div>
       )}
+
+      {!hasAny && <p className="text-muted-foreground">لا توجد طلبات.</p>}
     </div>
   );
 }

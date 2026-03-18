@@ -23,7 +23,7 @@ export async function PATCH(
 
     const existing = await prisma.shipmentRequest.findUnique({
       where: { id },
-      select: { id: true, status: true },
+      select: { id: true, status: true, priceSar: true, estimatedPriceSar: true },
     });
     if (!existing) {
       return NextResponse.json({ error: "الطلب غير موجود" }, { status: 404 });
@@ -62,7 +62,10 @@ export async function PATCH(
 
     // Only apply edited price when approving.
     if (decision === "approve" && priceSarNum != null) {
-      data.priceSar = priceSarNum;
+      const rounded = Math.round(priceSarNum);
+      data.priceSar = rounded;
+      const est = existing.estimatedPriceSar;
+      data.adminPriceChanged = typeof est === "number" ? Math.round(est) !== rounded : false;
     }
 
     const updated = await prisma.shipmentRequest.update({

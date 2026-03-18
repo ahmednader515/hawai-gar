@@ -77,6 +77,16 @@ export default async function ClientShipmentRequestDetailsPage({
             {r.status === "ADMIN_APPROVED" ? "السعر النهائي" : "السعر التقديري"}:{" "}
             {typeof r.priceSar === "number" ? formatSar(r.priceSar) : "—"}
           </p>
+          {r.status === "ADMIN_APPROVED" &&
+            r.adminPriceChanged &&
+            typeof r.estimatedPriceSar === "number" &&
+            typeof r.priceSar === "number" && (
+              <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 p-3 text-sm">
+                تم تعديل السعر بواسطة الأدمن من{" "}
+                <span className="font-semibold">{formatSar(r.estimatedPriceSar)}</span> إلى{" "}
+                <span className="font-semibold">{formatSar(r.priceSar)}</span>.
+              </div>
+            )}
           <p className="text-muted-foreground">تاريخ الاستلام: {r.pickupDate ?? "—"}</p>
           {r.notes && <p className="break-words">ملاحظات: {r.notes}</p>}
           {r.fromLat != null &&

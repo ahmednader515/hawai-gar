@@ -85,6 +85,8 @@ export async function POST(req: Request) {
         toLng: hasCoords ? tg : null,
         distanceKm,
         priceSar,
+        estimatedPriceSar: priceSar,
+        adminPriceChanged: false,
         containerSize: containerSize ? String(containerSize) : null,
         containersCount: containersCount ? String(containersCount) : null,
         pickupDate: pickupDate ? String(pickupDate) : null,

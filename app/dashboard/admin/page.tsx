@@ -108,8 +108,8 @@ export default async function AdminDashboardPage() {
                   <span className="font-medium min-w-0 break-words max-md:text-base">
                     من {o.fromText} → إلى {o.toText}
                   </span>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-sm text-muted-foreground whitespace-nowrap">
+                  <div className="flex flex-wrap items-center justify-end gap-2 min-w-0">
+                    <span className="text-xs sm:text-sm text-muted-foreground whitespace-normal break-words max-w-full">
                       {STATUS_LABELS[o.status] ?? o.status}
                       {o.adminDecisionAt
                         ? ` — ${new Date(o.adminDecisionAt).toLocaleString("ar-SA")}`
@@ -119,7 +119,7 @@ export default async function AdminDashboardPage() {
                     </span>
                     <Link
                       href={`/dashboard/admin/shipment-requests/${o.id}`}
-                      className="inline-flex h-7 items-center justify-center rounded-lg border border-border bg-background px-2.5 text-[0.8rem] font-medium hover:bg-muted whitespace-nowrap shrink-0"
+                      className="inline-flex h-7 items-center justify-center rounded-lg border border-border bg-background px-3 text-[0.8rem] font-medium hover:bg-muted whitespace-nowrap shrink-0 min-w-[64px]"
                     >
                       تفاصيل
                     </Link>

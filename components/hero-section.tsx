@@ -696,6 +696,17 @@ export function HeroSection({
                             {formatSar(trackingResult.data.priceSar)}
                           </div>
                         )}
+                        {trackingResult.data?.status === "ADMIN_APPROVED" &&
+                          trackingResult.data?.adminPriceChanged &&
+                          typeof trackingResult.data?.estimatedPriceSar === "number" &&
+                          typeof trackingResult.data?.priceSar === "number" && (
+                            <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 p-3 text-sm">
+                              تم تعديل السعر بواسطة الأدمن من{" "}
+                              <span className="font-semibold">{formatSar(trackingResult.data.estimatedPriceSar)}</span>{" "}
+                              إلى{" "}
+                              <span className="font-semibold">{formatSar(trackingResult.data.priceSar)}</span>.
+                            </div>
+                          )}
                         <div className="text-sm opacity-90">
                           تاريخ الإنشاء: {new Date(trackingResult.data.createdAt).toLocaleString("ar-SA")}
                         </div>

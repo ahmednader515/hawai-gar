@@ -63,6 +63,7 @@ export default async function ClientOrdersPage() {
   });
 
   const rows = orders as unknown as ClientOrderRow[];
+  const hasAny = approvedShipmentRequests.length > 0 || rows.length > 0;
 
   return (
     <div className="w-full min-w-0 max-w-full">
@@ -107,6 +108,16 @@ export default async function ClientOrdersPage() {
                     {r.status === "ADMIN_APPROVED" ? "السعر النهائي" : "السعر التقديري"}:{" "}
                     {typeof r.priceSar === "number" ? formatSar(r.priceSar) : "—"}
                   </p>
+                  {r.status === "ADMIN_APPROVED" &&
+                    r.adminPriceChanged &&
+                    typeof r.estimatedPriceSar === "number" &&
+                    typeof r.priceSar === "number" && (
+                      <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 p-3 text-sm">
+                        تم تعديل السعر بواسطة الأدمن من{" "}
+                        <span className="font-semibold">{formatSar(r.estimatedPriceSar)}</span> إلى{" "}
+                        <span className="font-semibold">{formatSar(r.priceSar)}</span>.
+                      </div>
+                    )}
                   <p className="text-sm text-muted-foreground break-words">
                     نوع الشحنة: {r.shipmentType ?? "—"}
                   </p>
@@ -139,9 +150,7 @@ export default async function ClientOrdersPage() {
           </div>
         )}
       </div>
-      {rows.length === 0 ? (
-        <p className="text-muted-foreground">لا توجد طلبات.</p>
-      ) : (
+      {rows.length === 0 ? null : (
         <div className="space-y-4">
           {rows.map((o) => (
             <Card key={o.id} className="min-w-0 overflow-hidden">
@@ -168,6 +177,8 @@ export default async function ClientOrdersPage() {
           ))}
         </div>
       )}
+
+      {!hasAny && <p className="text-muted-foreground">لا توجد طلبات.</p>}
     </div>
   );
 }
