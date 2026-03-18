@@ -54,13 +54,13 @@ export function AdminSidebar() {
                 : pathname === link.href || pathname.startsWith(link.href + "/");
           const Icon = link.icon;
           return (
-            <div key={link.href} className="min-w-0">
+            <div key={link.href} className="min-w-0 flex-1 flex flex-col">
               {index > 0 ? (
                 <div className="h-px w-full bg-gray-300 dark:bg-gray-600" aria-hidden />
               ) : null}
               <Link
                 href={link.href}
-                className={`w-full flex items-center justify-center gap-3 px-4 py-3 text-center font-semibold text-lg transition-colors min-w-0 ${
+                className={`w-full flex-1 flex items-center justify-start gap-3 px-4 py-0 text-right font-semibold text-lg transition-colors min-w-0 ${
                   isActive
                     ? "bg-primary text-primary-foreground"
                     : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
