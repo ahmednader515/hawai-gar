@@ -1,15 +1,44 @@
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { auth } from "@/auth";
 import { HeroSection } from "@/components/hero-section";
-import { SolutionsSection } from "@/components/solutions-section";
-import { FeatureCarouselSection } from "@/components/feature-carousel-section";
-import { StatsHeroSection } from "@/components/stats-hero-section";
-import { NewsSection } from "@/components/news-section";
-import { CustomerGuidelinesSection } from "@/components/customer-guidelines-section";
 import { prisma } from "@/lib/db";
 import { getHeroContact } from "@/lib/site-settings";
 import { unstable_cache } from "next/cache";
+import { getTranslations } from "@/lib/i18n/server";
+
+/** Below-the-fold sections: separate chunks so first paint ships less JS */
+function BelowFoldSkeleton({ className = "min-h-[12rem]" }: { className?: string }) {
+  return <div className={`animate-pulse rounded-lg bg-muted/25 ${className}`} aria-hidden />;
+}
+
+const SolutionsSection = dynamic(
+  () => import("@/components/solutions-section").then((m) => ({ default: m.SolutionsSection })),
+  { loading: () => <BelowFoldSkeleton className="min-h-[220px]" /> },
+);
+
+const FeatureCarouselSection = dynamic(
+  () => import("@/components/feature-carousel-section").then((m) => ({ default: m.FeatureCarouselSection })),
+  { loading: () => <BelowFoldSkeleton className="min-h-[280px]" /> },
+);
+
+const StatsHeroSection = dynamic(
+  () => import("@/components/stats-hero-section").then((m) => ({ default: m.StatsHeroSection })),
+  { loading: () => <BelowFoldSkeleton className="min-h-[180px]" /> },
+);
+
+const NewsSection = dynamic(
+  () => import("@/components/news-section").then((m) => ({ default: m.NewsSection })),
+  { loading: () => <BelowFoldSkeleton className="min-h-[200px]" /> },
+);
+
+const CustomerGuidelinesSection = dynamic(
+  () => import("@/components/customer-guidelines-section").then((m) => ({
+    default: m.CustomerGuidelinesSection,
+  })),
+  { loading: () => <BelowFoldSkeleton className="min-h-[200px]" /> },
+);
 
 const getHomeContent = unstable_cache(
   async () => {
@@ -56,6 +85,7 @@ function HomeSectionSeparator({ flip = true }: { flip?: boolean }) {
 }
 
 export default async function Home() {
+  const t = await getTranslations();
   const session = await auth();
   let newsItems: Awaited<ReturnType<typeof prisma.newsItem.findMany>> = [];
   let advisories: Awaited<ReturnType<typeof prisma.customerAdvisory.findMany>> = [];
@@ -96,19 +126,23 @@ export default async function Home() {
             {session?.user ? (
               session.user.role !== "COMPANY" ? (
                 <Link href="/dashboard" className="hover:underline touch-manipulation py-1 font-medium">
-                  لوحة التحكم
+                  {t("common.dashboard")}
                 </Link>
               ) : null
             ) : (
               <>
-                <Link href="/login" className="hover:underline touch-manipulation py-1">تسجيل الدخول</Link>
-                <Link href="/register" className="hover:underline touch-manipulation py-1">التسجيل</Link>
+                <Link href="/login" className="hover:underline touch-manipulation py-1">
+                  {t("common.login")}
+                </Link>
+                <Link href="/register" className="hover:underline touch-manipulation py-1">
+                  {t("footer.register")}
+                </Link>
               </>
             )}
           </nav>
         </div>
         <p className="text-center text-xs sm:text-sm text-muted-foreground mt-4 px-2">
-          © {new Date().getFullYear()} hawai GAR. جميع الحقوق محفوظة.
+          {t("footer.copyright").replace("{year}", String(new Date().getFullYear()))}
         </p>
       </footer>
     </div>

@@ -2,14 +2,6 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 
-const STATUS_LABELS: Record<string, string> = {
-  PENDING_CARRIER: "بانتظار قرار شركة النقل",
-  CARRIER_ACCEPTED: "بانتظار قرار الأدمن بقبول أو رفض الطلب",
-  CARRIER_REFUSED: "بانتظار قرار الأدمن بقبول أو رفض الطلب",
-  ADMIN_APPROVED: "تمت الموافقة النهائية",
-  ADMIN_REJECTED: "تم الرفض النهائي",
-};
-
 /**
  * Track ShipmentRequest by its id (for companies only).
  * GET /api/shipment-requests/track?id=...
@@ -54,6 +46,8 @@ export async function GET(req: Request) {
         createdAt: true,
         carrierDecisionAt: true,
         adminDecisionAt: true,
+        invoiceLink: true,
+        invoiceImageUrl: true,
       },
     });
 
@@ -83,14 +77,14 @@ export async function GET(req: Request) {
       pickupDate: r.pickupDate,
       notes: r.notes,
       status: r.status,
-      statusLabel: STATUS_LABELS[r.status] ?? r.status,
       createdAt: r.createdAt,
       carrierDecisionAt: r.carrierDecisionAt,
       adminDecisionAt: r.adminDecisionAt,
+      invoiceLink: r.invoiceLink,
+      invoiceImageUrl: r.invoiceImageUrl,
     });
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "تعذر جلب حالة الطلب" }, { status: 500 });
   }
 }
-

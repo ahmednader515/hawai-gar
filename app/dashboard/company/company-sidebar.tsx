@@ -2,15 +2,27 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useMemo } from "react";
 import { ClipboardList, PlusCircle } from "lucide-react";
+import { useI18n } from "@/components/providers/i18n-provider";
 
-const links = [
-  { href: "/dashboard/company/orders", label: "طلباتي", icon: ClipboardList },
-  { href: "/dashboard/company/new-order", label: "انشاء طلب", icon: PlusCircle },
-];
+const LINK_DEFS = [
+  { href: "/dashboard/company/orders", labelKey: "nav.company.myOrders", icon: ClipboardList },
+  { href: "/dashboard/company/new-order", labelKey: "nav.company.newOrder", icon: PlusCircle },
+] as const;
 
 export function CompanySidebar() {
   const pathname = usePathname();
+  const { t } = useI18n();
+  const links = useMemo(
+    () =>
+      LINK_DEFS.map((d) => ({
+        href: d.href,
+        label: t(d.labelKey),
+        icon: d.icon,
+      })),
+    [t],
+  );
 
   return (
     <aside className="w-full max-w-[100vw] min-w-0 shrink-0 flex flex-row border-b border-border bg-card md:w-64 md:flex-col md:h-full md:min-h-0 md:overflow-hidden md:overflow-y-hidden md:border-b-0 md:border-l overflow-hidden">

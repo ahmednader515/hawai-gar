@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import MapboxGeocoder from "@mapbox/mapbox-gl-geocoder";
+import { useI18n } from "@/components/providers/i18n-provider";
 
 export type PickedLocation = {
   address: string;
@@ -15,22 +16,25 @@ function isValidPicked(v: PickedLocation | null): v is PickedLocation {
 }
 
 export function MapboxLocationPicker({
-  labelFrom = "من",
-  labelTo = "إلى",
   valueFrom,
   valueTo,
   onChangeFrom,
   onChangeTo,
   className,
 }: {
-  labelFrom?: string;
-  labelTo?: string;
   valueFrom: PickedLocation | null;
   valueTo: PickedLocation | null;
   onChangeFrom: (v: PickedLocation | null) => void;
   onChangeTo: (v: PickedLocation | null) => void;
   className?: string;
 }) {
+  const { t, locale } = useI18n();
+  const labelFrom = t("hero.mapFrom");
+  const labelTo = t("hero.mapTo");
+  const placeholderFrom = t("mapPicker.placeholderFrom");
+  const placeholderTo = t("mapPicker.placeholderTo");
+  const geocoderLanguage = locale === "ar" ? "ar" : "en";
+
   const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN ?? "";
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -58,10 +62,10 @@ export function MapboxLocationPicker({
       if (which === "from") onChangeFrom(picked);
       else onChangeTo(picked);
     },
-    [onChangeFrom, onChangeTo]
+    [onChangeFrom, onChangeTo],
   );
 
-  // Init map + geocoders once
+  // Init map + geocoders — rebuild when locale / copy changes so placeholders & geocoder language match UI
   useEffect(() => {
     if (!token) return;
     if (!mapContainerRef.current) return;
@@ -85,8 +89,8 @@ export function MapboxLocationPicker({
         accessToken: token,
         mapboxgl: mapboxgl as any,
         marker: false,
-        placeholder: which === "from" ? "اختر موقع الانطلاق" : "اختر موقع الوصول",
-        language: "ar",
+        placeholder: which === "from" ? placeholderFrom : placeholderTo,
+        language: geocoderLanguage,
         countries: "sa,ae,kw,qa,bh,om",
       });
 
@@ -100,7 +104,6 @@ export function MapboxLocationPicker({
       geocoderToHostRef.current.replaceChildren(geocoderTo.onAdd(map));
     }
 
-    // Default selection: "from" (so map clicks go to "from" until user picks "to")
     setActive("from");
     activeRef.current = "from";
     const fromInput = geocoderFromHostRef.current?.querySelector("input");
@@ -150,8 +153,7 @@ export function MapboxLocationPicker({
       map.remove();
       mapRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, placeholderFrom, placeholderTo, geocoderLanguage, setPicked]);
 
   // Keep markers in sync with values
   useEffect(() => {
@@ -181,7 +183,7 @@ export function MapboxLocationPicker({
     return (
       <div className={className}>
         <div className="rounded-lg border border-border bg-muted/20 p-4 text-sm text-muted-foreground">
-          لإظهار الخريطة، أضف المتغير `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` في إعدادات البيئة.
+          {t("mapPicker.missingToken")}
         </div>
       </div>
     );
@@ -215,7 +217,7 @@ export function MapboxLocationPicker({
       <div className="mt-3 rounded-lg overflow-hidden border border-border">
         <div className="flex items-center justify-between gap-2 px-3 py-2 bg-background">
           <div className="text-xs text-muted-foreground">
-            اختر على الخريطة — التحديد الحالي:{" "}
+            {t("mapPicker.clickHint")}{" "}
             <span className="font-medium text-foreground">{active === "from" ? labelFrom : labelTo}</span>
           </div>
           <div className="flex gap-2">
@@ -243,9 +245,8 @@ export function MapboxLocationPicker({
             </button>
           </div>
         </div>
-        <div ref={mapContainerRef} className="w-full h-[280px]" />
+        <div ref={mapContainerRef} className="w-full h-[280px]" role="presentation" aria-label={t("mapPicker.mapAria")} />
       </div>
     </div>
   );
 }
-

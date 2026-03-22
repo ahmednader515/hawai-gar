@@ -16,7 +16,8 @@ export async function PATCH(
     const data: Record<string, unknown> = {};
     if (body.titleAr != null) data.titleAr = body.titleAr;
     if (body.titleEn != null) data.titleEn = body.titleEn;
-    if (body.excerpt != null) data.excerpt = body.excerpt;
+    if (body.excerpt !== undefined) data.excerpt = body.excerpt;
+    if (body.excerptEn !== undefined) data.excerptEn = body.excerptEn;
     if (body.link != null) data.link = body.link;
     if (body.publishedAt != null) data.publishedAt = new Date(body.publishedAt);
     const item = await prisma.customerAdvisory.update({ where: { id }, data });

@@ -20,7 +20,10 @@ export default async function DashboardLayout({
         role={role as "ADMIN" | "SUPERVISOR" | "COMPANY" | "DRIVER"}
         email={session.user.email ?? null}
       />
-      <main className="container mx-auto w-full max-w-full min-w-0 flex-1 min-h-0 px-4 py-4 overflow-x-hidden overflow-y-auto">{children}</main>
+      {/* overflow-y only inside role layouts so desktop sidebars stay visible */}
+      <main className="flex min-h-0 w-full max-w-full min-w-0 flex-1 flex-col overflow-hidden py-4 max-md:px-[5vw] md:px-4">
+        {children}
+      </main>
     </div>
   );
 }

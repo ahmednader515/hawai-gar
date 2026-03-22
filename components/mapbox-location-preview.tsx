@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import mapboxgl from "mapbox-gl";
+import { useI18n } from "@/components/providers/i18n-provider";
 
 type LatLng = { lat: number; lng: number };
 
@@ -16,6 +17,7 @@ export function MapboxLocationPreview({
   heightClassName?: string;
   interactive?: boolean;
 }) {
+  const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
@@ -116,7 +118,7 @@ export function MapboxLocationPreview({
     <div
       ref={containerRef}
       className={`w-full rounded-lg overflow-hidden border border-border bg-muted/30 ${heightClassName}`}
-      aria-label="خريطة الموقع"
+      aria-label={t("mapPicker.mapAria")}
     />
   );
 }

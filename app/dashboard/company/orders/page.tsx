@@ -2,6 +2,7 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { AR_LOCALE_LATN } from "@/lib/locale";
 
 const statusLabels: Record<string, string> = {
   PENDING_APPROVAL: "في انتظار موافقة الإدارة",
@@ -77,7 +78,7 @@ export default async function CompanyOrdersPage() {
                   {o.driver?.driverProfile?.carPlate ?? "—"}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {new Date(o.createdAt).toLocaleDateString("ar-SA")}
+                  {new Date(o.createdAt).toLocaleDateString(AR_LOCALE_LATN)}
                 </p>
               </CardContent>
             </Card>

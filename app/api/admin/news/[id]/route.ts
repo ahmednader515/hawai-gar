@@ -17,8 +17,10 @@ export async function PATCH(
     if (body.titleAr != null) data.titleAr = body.titleAr;
     if (body.titleEn != null) data.titleEn = body.titleEn;
     if (body.category != null) data.category = body.category;
+    if (body.categoryEn !== undefined) data.categoryEn = body.categoryEn;
     if (body.imageUrl != null) data.imageUrl = body.imageUrl;
-    if (body.excerpt != null) data.excerpt = body.excerpt;
+    if (body.excerpt !== undefined) data.excerpt = body.excerpt;
+    if (body.excerptEn !== undefined) data.excerptEn = body.excerptEn;
     if (body.link != null) data.link = body.link;
     if (body.publishedAt != null) data.publishedAt = new Date(body.publishedAt);
     const item = await prisma.newsItem.update({ where: { id }, data });

@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { OrderAdminActions } from "@/app/dashboard/admin/orders/[id]/order-admin-actions";
+import { AR_LOCALE_LATN } from "@/lib/locale";
 
 const statusLabels: Record<string, string> = {
   PENDING_APPROVAL: "في انتظار موافقة الإدارة",
@@ -74,7 +75,7 @@ export default async function SupervisorOrderDetailPage({
               الحالة: {statusLabels[order.status] ?? order.status}
             </p>
             <p className="text-xs text-muted-foreground">
-              {new Date(order.createdAt).toLocaleDateString("ar-SA")}
+              {new Date(order.createdAt).toLocaleDateString(AR_LOCALE_LATN)}
             </p>
           </CardHeader>
           <CardContent>

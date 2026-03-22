@@ -2,77 +2,103 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useMemo } from "react";
 import { ClipboardList, Newspaper, BookOpen, Mail } from "lucide-react";
+import { useI18n } from "@/components/providers/i18n-provider";
 
-const links = [
-  { href: "/dashboard/admin", label: "الطلبات", icon: ClipboardList },
-  { href: "/dashboard/admin/news", label: "الأخبار", icon: Newspaper },
-  { href: "/dashboard/admin/advisories", label: "الارشادات", icon: BookOpen },
-  { href: "/dashboard/admin/contact", label: "معلومات التواصل", icon: Mail },
-];
+const LINK_DEFS = [
+  { href: "/dashboard/admin", labelKey: "nav.admin.orders", shortKey: "nav.admin.ordersShort", icon: ClipboardList },
+  { href: "/dashboard/admin/news", labelKey: "nav.admin.news", shortKey: "nav.admin.newsShort", icon: Newspaper },
+  { href: "/dashboard/admin/advisories", labelKey: "nav.admin.advisories", shortKey: "nav.admin.advisoriesShort", icon: BookOpen },
+  { href: "/dashboard/admin/contact", labelKey: "nav.admin.contact", shortKey: "nav.admin.contactShort", icon: Mail },
+] as const;
+
+function isAdminOrdersActive(pathname: string) {
+  return (
+    pathname === "/dashboard/admin" ||
+    pathname.startsWith("/dashboard/admin/shipment-requests") ||
+    pathname.startsWith("/dashboard/admin/orders")
+  );
+}
+
+function linkActive(pathname: string, href: string) {
+  if (href === "/dashboard/admin") return isAdminOrdersActive(pathname);
+  if (href === "/dashboard/admin/contact") {
+    return pathname === "/dashboard/admin/contact";
+  }
+  return pathname === href || pathname.startsWith(href + "/");
+}
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const { t } = useI18n();
+  const links = useMemo(
+    () =>
+      LINK_DEFS.map((d) => ({
+        href: d.href,
+        label: t(d.labelKey),
+        shortLabel: t(d.shortKey),
+        icon: d.icon,
+      })),
+    [t],
+  );
 
   return (
-    <aside className="w-full max-w-[100vw] min-w-0 shrink-0 border-b border-border bg-card overflow-hidden md:w-64 md:flex-col md:h-full md:min-h-0 md:overflow-hidden md:overflow-y-hidden md:border-b-0 md:border-l">
-      {/* Mobile: 2 columns grid (wrap to two rows) */}
-      <div className="grid grid-cols-2 gap-px bg-gray-300 dark:bg-gray-600 md:hidden">
+    <>
+      {/* Desktop: compact side nav (normal item height) */}
+      <aside className="hidden md:flex md:w-56 md:shrink-0 md:flex-col md:border-l md:border-border md:bg-card md:p-3 md:gap-2 md:overflow-y-auto">
         {links.map((link) => {
-          const isActive =
-            link.href === "/dashboard/admin"
-              ? pathname === "/dashboard/admin" || pathname.startsWith("/dashboard/admin/orders")
-              : link.href === "/dashboard/admin/contact"
-                ? pathname === "/dashboard/admin/contact"
-                : pathname === link.href || pathname.startsWith(link.href + "/");
+          const isActive = linkActive(pathname, link.href);
           const Icon = link.icon;
           return (
             <Link
               key={link.href}
               href={link.href}
-              className={`flex items-center justify-center gap-2 px-2 py-3 text-center font-semibold text-sm transition-colors min-w-0 ${
+              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-right text-base font-semibold transition-colors min-w-0 ${
                 isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-foreground hover:bg-muted"
               }`}
             >
               <Icon className="w-5 h-5 shrink-0" aria-hidden />
-              <span className="truncate">{link.label}</span>
+              <span className="leading-snug">{link.label}</span>
             </Link>
           );
         })}
-      </div>
+      </aside>
 
-      {/* Desktop: vertical list */}
-      <div className="hidden md:flex md:flex-col md:h-full md:min-h-0">
-        {links.map((link, index) => {
-          const isActive =
-            link.href === "/dashboard/admin"
-              ? pathname === "/dashboard/admin" || pathname.startsWith("/dashboard/admin/orders")
-              : link.href === "/dashboard/admin/contact"
-                ? pathname === "/dashboard/admin/contact"
-                : pathname === link.href || pathname.startsWith(link.href + "/");
-          const Icon = link.icon;
-          return (
-            <div key={link.href} className="min-w-0 flex-1 flex flex-col">
-              {index > 0 ? (
-                <div className="h-px w-full bg-gray-300 dark:bg-gray-600" aria-hidden />
-              ) : null}
+      {/* Mobile: bottom app-style navigation */}
+      <nav
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-card/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.35)]"
+        aria-label={t("common.mainNavigation")}
+      >
+        <div className="mx-auto flex max-w-lg items-stretch justify-between gap-0 px-1 pt-1">
+          {links.map((link) => {
+            const isActive = linkActive(pathname, link.href);
+            const Icon = link.icon;
+            return (
               <Link
+                key={link.href}
                 href={link.href}
-                className={`w-full flex-1 flex items-center justify-start gap-3 px-4 py-0 text-right font-semibold text-lg transition-colors min-w-0 ${
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-t-lg px-1 py-2 text-center transition-colors ${
+                  isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <Icon className="w-6 h-6 shrink-0" aria-hidden />
-                <span className="whitespace-normal truncate-none">{link.label}</span>
+                <span
+                  className={`flex h-10 w-10 items-center justify-center rounded-2xl ${
+                    isActive ? "bg-primary text-primary-foreground" : "bg-muted"
+                  }`}
+                >
+                  <Icon className="h-5 w-5 shrink-0" aria-hidden />
+                </span>
+                <span className="max-w-[4.5rem] truncate text-[0.65rem] font-semibold leading-tight">
+                  {link.shortLabel}
+                </span>
               </Link>
-            </div>
-          );
-        })}
-      </div>
-    </aside>
+            );
+          })}
+        </div>
+      </nav>
+    </>
   );
 }

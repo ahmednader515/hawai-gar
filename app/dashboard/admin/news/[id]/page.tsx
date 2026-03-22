@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
+import { getTranslations } from "@/lib/i18n/server";
 import { NewsItemForm } from "../news-item-form";
 
 export default async function EditNewsPage({
@@ -9,6 +10,7 @@ export default async function EditNewsPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const t = await getTranslations();
   const session = await auth();
   if (!session?.user) redirect("/login");
   if (session.user.role !== "ADMIN") redirect("/dashboard");
@@ -20,9 +22,9 @@ export default async function EditNewsPage({
   return (
     <div>
       <Link href="/dashboard/admin/news" className="text-sm text-muted-foreground hover:underline mb-4 inline-block">
-        ← الأخبار
+        {t("dashboard.admin.newsBackLink")}
       </Link>
-      <h1 className="text-2xl font-bold mb-6">تعديل الخبر</h1>
+      <h1 className="text-2xl font-bold mb-6">{t("dashboard.admin.newsEditPageTitle")}</h1>
       <NewsItemForm item={item} />
     </div>
   );

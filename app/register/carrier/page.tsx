@@ -2,9 +2,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { Suspense } from "react";
 import { RegisterForm } from "../register-form";
-import { BackButton } from "@/components/back-button";
+import { LoginToolbar } from "@/components/login-toolbar";
+import { getTranslations } from "@/lib/i18n/server";
 
-export default function RegisterCarrierPage() {
+export default async function RegisterCarrierPage() {
+  const t = await getTranslations();
   return (
     <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
       <div className="relative hidden lg:block min-h-screen">
@@ -14,9 +16,7 @@ export default function RegisterCarrierPage() {
 
       <div className="flex flex-col bg-white min-h-screen">
         <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 overflow-auto relative">
-          <div className="absolute top-4 right-4">
-            <BackButton />
-          </div>
+          <LoginToolbar />
           <Link href="/" className="mb-6 sm:mb-8 shrink-0">
             <Image src="/logo.png" alt="hawai GAR" width={56} height={56} className="object-contain" />
           </Link>
@@ -28,12 +28,12 @@ export default function RegisterCarrierPage() {
             <RegisterForm forcedRole="DRIVER" />
           </Suspense>
           <p className="mt-6 text-center text-muted-foreground text-sm shrink-0">
-            لديك حساب؟{" "}
+            {t("registerForm.hasAccount")}{" "}
             <Link
               href="/login"
               className="inline-flex items-center justify-center rounded-lg border-2 border-gray-200 bg-white px-4 py-2 text-sm font-medium text-foreground hover:bg-gray-50 hover:border-gray-300 transition-colors"
             >
-              تسجيل الدخول
+              {t("registerForm.goLogin")}
             </Link>
           </p>
         </div>

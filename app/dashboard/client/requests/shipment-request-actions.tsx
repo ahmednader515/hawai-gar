@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/components/providers/i18n-provider";
 
 export function ShipmentRequestActions({ id, status }: { id: string; status: string }) {
+  const { t } = useI18n();
   const router = useRouter();
   const [loading, setLoading] = useState<"accept" | "refuse" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +24,7 @@ export function ShipmentRequestActions({ id, status }: { id: string; status: str
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error ?? "تعذر تنفيذ العملية");
+        setError(data.error ?? t("dashboard.client.carrierActionError"));
         return;
       }
       router.refresh();
@@ -44,7 +46,7 @@ export function ShipmentRequestActions({ id, status }: { id: string; status: str
           onClick={() => send("accept")}
           disabled={!canDecide || !!loading}
         >
-          {loading === "accept" ? "جاري..." : "قبول"}
+          {loading === "accept" ? t("dashboard.client.working") : t("dashboard.client.accept")}
         </Button>
         <Button
           size="sm"
@@ -52,10 +54,9 @@ export function ShipmentRequestActions({ id, status }: { id: string; status: str
           onClick={() => send("refuse")}
           disabled={!canDecide || !!loading}
         >
-          {loading === "refuse" ? "جاري..." : "رفض"}
+          {loading === "refuse" ? t("dashboard.client.working") : t("dashboard.client.refuse")}
         </Button>
       </div>
     </div>
   );
 }
-

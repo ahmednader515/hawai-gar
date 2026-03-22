@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   }
   try {
     const body = await req.json();
-    const { titleAr, titleEn, category, imageUrl, excerpt, link, publishedAt } = body;
+    const { titleAr, titleEn, category, categoryEn, imageUrl, excerpt, excerptEn, link, publishedAt } = body;
     if (!titleAr || !category || !imageUrl || !publishedAt) {
       return NextResponse.json(
         { error: "titleAr, category, imageUrl, publishedAt required" },
@@ -21,8 +21,10 @@ export async function POST(req: Request) {
         titleAr,
         titleEn: titleEn ?? null,
         category,
+        categoryEn: categoryEn ?? null,
         imageUrl,
         excerpt: excerpt ?? null,
+        excerptEn: excerptEn ?? null,
         link: link ?? null,
         publishedAt: new Date(publishedAt),
       },

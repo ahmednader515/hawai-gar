@@ -10,6 +10,7 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Prefer direct Postgres for CLI when set (Accelerate URLs are not valid for migrate/db push).
+    url: process.env["DATABASE_DIRECT_URL"] || process.env["DATABASE_URL"],
   },
 });

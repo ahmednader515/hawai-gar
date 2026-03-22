@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* UploadThing Tailwind v4 variants only — avoid @uploadthing/react/styles.css (resets --tw-* site-wide) */
+@import "uploadthing/tw/v4";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "mapbox-gl/dist/mapbox-gl.css";
@@ -160,9 +162,12 @@
   }
   html {
     @apply font-sans;
-    font-size: 18px;
+    /* Root scale: larger = bigger text-sm/md/lg across the whole site (rem-based) */
+    font-size: 21px;
     scroll-behavior: smooth;
     overflow-x: hidden;
+    /* Prefer Western (lining) numerals where the font supports it */
+    font-variant-numeric: lining-nums;
   }
   html {
     --font-sans: "Saudi", ui-sans-serif, system-ui, sans-serif;

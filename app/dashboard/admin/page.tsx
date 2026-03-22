@@ -1,24 +1,7 @@
-import Link from "next/link";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-
-function formatSar(v: number) {
-  return new Intl.NumberFormat("ar-SA", {
-    style: "currency",
-    currency: "SAR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(v);
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  PENDING_CARRIER: "بانتظار قرار شركة النقل",
-  CARRIER_ACCEPTED: "بانتظار قرار الأدمن",
-  CARRIER_REFUSED: "تم رفض الطلب من شركة النقل",
-  ADMIN_APPROVED: "تمت الموافقة النهائية",
-  ADMIN_REJECTED: "تم الرفض النهائي",
-};
+import { getTranslations } from "@/lib/i18n/server";
+import { AdminShipmentList, type AdminShipmentRow } from "./admin-shipment-list";
 
 type SummaryRow = {
   id: string;
@@ -39,14 +22,14 @@ type SummaryRow = {
 };
 
 export default async function AdminDashboardPage() {
+  const t = await getTranslations();
   const session = await auth();
   if (!session?.user) return null;
   if (session.user.role !== "ADMIN") return null;
 
   const requests = await prisma.shipmentRequest.findMany({
-    where: { status: { in: ["CARRIER_ACCEPTED", "ADMIN_APPROVED", "ADMIN_REJECTED"] } },
-    orderBy: [{ carrierDecisionAt: "desc" }, { adminDecisionAt: "desc" }, { createdAt: "desc" }],
-    take: 50,
+    orderBy: { createdAt: "desc" },
+    take: 150,
     select: {
       id: true,
       status: true,
@@ -88,75 +71,37 @@ export default async function AdminDashboardPage() {
 
   const userMap = new Map(users.map((u) => [u.id, u]));
 
+  const enriched: AdminShipmentRow[] = rows.map((o) => {
+    const company = o.companyId ? userMap.get(o.companyId) : null;
+    const carrier = o.carrierId ? userMap.get(o.carrierId) : null;
+    return {
+      id: o.id,
+      fromText: o.fromText,
+      toText: o.toText,
+      shipmentType: o.shipmentType,
+      distanceKm: o.distanceKm,
+      priceSar: o.priceSar,
+      carrierDecisionAt: o.carrierDecisionAt?.toISOString() ?? null,
+      adminDecisionAt: o.adminDecisionAt?.toISOString() ?? null,
+      status: o.status,
+      containerSize: o.containerSize,
+      containersCount: o.containersCount,
+      pickupDate: o.pickupDate,
+      notes: o.notes,
+      companyName: company?.companyProfile?.companyName ?? null,
+      carrierName: carrier?.driverProfile?.fullName ?? null,
+      carPlate: carrier?.driverProfile?.carPlate ?? null,
+    };
+  });
+
   return (
     <div className="w-full min-w-0 max-w-full overflow-hidden">
-      <h1 className="text-2xl font-bold mb-6 break-words">طلبات الشحن (بانتظار/قرار الأدمن)</h1>
+      <h1 className="text-2xl font-bold mb-2 break-words">{t("dashboard.admin.shipmentRequestsTitle")}</h1>
+      <p className="text-muted-foreground mb-6 text-sm md:text-base">
+        {t("dashboard.admin.shipmentRequestsSubtitle")}
+      </p>
 
-      {rows.length === 0 ? (
-        <p className="text-muted-foreground">لا توجد طلبات.</p>
-      ) : (
-        <div className="space-y-4 min-w-0 overflow-hidden">
-          {rows.map((o) => {
-            const company = o.companyId ? userMap.get(o.companyId) : null;
-            const carrier = o.carrierId ? userMap.get(o.carrierId) : null;
-            return (
-              <Card
-                key={o.id}
-                className="min-w-0 w-full overflow-hidden border border-border max-md:py-5 max-md:px-4"
-              >
-                <CardHeader className="pb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between min-w-0 max-md:gap-3 max-md:pb-3">
-                  <span className="font-medium min-w-0 break-words max-md:text-base">
-                    من {o.fromText} → إلى {o.toText}
-                  </span>
-                  <div className="flex flex-wrap items-center justify-end gap-2 min-w-0">
-                    <span className="text-xs sm:text-sm text-muted-foreground whitespace-normal break-words max-w-full">
-                      {STATUS_LABELS[o.status] ?? o.status}
-                      {o.adminDecisionAt
-                        ? ` — ${new Date(o.adminDecisionAt).toLocaleString("ar-SA")}`
-                        : o.carrierDecisionAt
-                          ? ` — ${new Date(o.carrierDecisionAt).toLocaleString("ar-SA")}`
-                          : ""}
-                    </span>
-                    <Link
-                      href={`/dashboard/admin/shipment-requests/${o.id}`}
-                      className="inline-flex h-7 items-center justify-center rounded-lg border border-border bg-background px-3 text-[0.8rem] font-medium hover:bg-muted whitespace-nowrap shrink-0 min-w-[64px]"
-                    >
-                      تفاصيل
-                    </Link>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="min-w-0 max-md:pt-1 space-y-1">
-                  <p className="text-sm text-muted-foreground break-words max-md:text-base">
-                    الشركة: {company?.companyProfile?.companyName ?? "—"} — شركة النقل:{" "}
-                    {carrier?.driverProfile?.fullName ?? "—"}
-                    {carrier?.driverProfile?.carPlate ? ` (${carrier.driverProfile.carPlate})` : ""}
-                  </p>
-
-                  <p className="text-sm text-muted-foreground break-words">
-                    نوع الشحنة: {o.shipmentType ?? "—"}
-                  </p>
-                  <p className="text-sm text-muted-foreground break-words">
-                    المسافة: {typeof o.distanceKm === "number" ? `${o.distanceKm.toFixed(1)} كم` : "—"}
-                  </p>
-                  <p className="text-sm text-muted-foreground break-words">
-                    السعر: {typeof o.priceSar === "number" ? formatSar(o.priceSar) : "—"}
-                  </p>
-
-                  <p className="text-sm text-muted-foreground break-words">
-                    حجم الحاوية: {o.containerSize ?? "—"} — العدد: {o.containersCount ?? "—"}
-                  </p>
-                  <p className="text-sm text-muted-foreground break-words">
-                    تاريخ الاستلام: {o.pickupDate ?? "—"}
-                  </p>
-
-                  {o.notes && <p className="text-sm text-foreground break-words">ملاحظات: {o.notes}</p>}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+      <AdminShipmentList rows={enriched} />
     </div>
   );
 }

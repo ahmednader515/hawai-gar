@@ -1,9 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useI18n } from "@/components/providers/i18n-provider";
 
 export function BackButton({ className }: { className?: string }) {
   const router = useRouter();
+  const { t } = useI18n();
   return (
     <button
       type="button"
@@ -16,7 +18,7 @@ export function BackButton({ className }: { className?: string }) {
       <span aria-hidden className="text-lg leading-none">
         ‹
       </span>
-      رجوع
+      {t("common.back")}
     </button>
   );
 }

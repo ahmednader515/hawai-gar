@@ -1,123 +1,300 @@
 import Link from "next/link";
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
+import { ArrowLeft, Calendar, MapPinned, Package, Phone, Route, StickyNote } from "lucide-react";
+import { getLocale, getTranslations } from "@/lib/i18n/server";
 import { prisma } from "@/lib/db";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { ShipmentRequestActions } from "../../requests/shipment-request-actions";
+import { Card, CardContent } from "@/components/ui/card";
+import { CopyableRequestId } from "@/components/copyable-request-id";
 import { MapboxLocationPreview } from "@/components/mapbox-location-preview";
+import { SarPriceDisplay } from "@/components/sar-price-display";
+import { ShipmentPriceChangeAlert } from "@/components/shipment-price-change-alert";
+import { ShipmentRequestActions } from "../../requests/shipment-request-actions";
+import { toLatinDigits } from "@/lib/to-latin-digits";
+import { cn } from "@/lib/utils";
+import { ShipmentRequestProgressBar } from "@/components/shipment-request-progress-bar";
 
-function formatSar(v: number) {
-  return new Intl.NumberFormat("ar-SA", {
-    style: "currency",
-    currency: "SAR",
-    maximumFractionDigits: 0,
-  }).format(v);
+function statusBadgeClass(status: string) {
+  switch (status) {
+    case "ADMIN_APPROVED":
+      return "border-emerald-200 bg-emerald-100 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100";
+    case "AWAITING_PAYMENT_APPROVAL":
+      return "border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100";
+    case "ADMIN_REJECTED":
+      return "border-red-200 bg-red-100 text-red-900 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-100";
+    case "PENDING_CARRIER":
+      return "border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100";
+    case "CARRIER_ACCEPTED":
+      return "border-sky-200 bg-sky-100 text-sky-900 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100";
+    case "CARRIER_REFUSED":
+      return "border-orange-200 bg-orange-100 text-orange-900 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-100";
+    case "COMPLETE":
+      return "border-green-200 bg-green-100 text-green-900 dark:border-green-800 dark:bg-green-950/40 dark:text-green-100";
+    default:
+      return "border-border bg-muted text-muted-foreground";
+  }
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  PENDING_CARRIER: "بانتظار قرار شركة النقل",
-  CARRIER_ACCEPTED: "بانتظار قرار الأدمن بقبول أو رفض الطلب",
-  CARRIER_REFUSED: "بانتظار قرار الأدمن بقبول أو رفض الطلب",
-  ADMIN_APPROVED: "تمت الموافقة النهائية",
-  ADMIN_REJECTED: "تم الرفض النهائي",
-};
+function shipmentStatusLabel(status: string, t: (key: string) => string) {
+  const key = `shipmentRequestStatus.${status}`;
+  const msg = t(key);
+  return msg !== key ? msg : status;
+}
 
-export default async function ClientShipmentRequestDetailsPage({
+export default async function ClientShipmentRequestDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
-  if (session.user.role !== "DRIVER") redirect("/dashboard");
-
   const { id } = await params;
-  const r = await prisma.shipmentRequest.findUnique({ where: { id } });
-  if (!r) redirect("/dashboard/client/requests");
+  const t = await getTranslations();
+  const locale = await getLocale();
+  const dateLocale = locale === "ar" ? "ar-SA" : "en-GB";
 
-  // If carrier already accepted/refused, only show to that carrier.
-  if (r.carrierId && r.carrierId !== session.user.id) {
-    redirect("/dashboard/client/requests");
-  }
+  const r = await prisma.shipmentRequest.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      status: true,
+      createdAt: true,
+      fromText: true,
+      toText: true,
+      shipmentType: true,
+      fromLat: true,
+      fromLng: true,
+      toLat: true,
+      toLng: true,
+      distanceKm: true,
+      priceSar: true,
+      estimatedPriceSar: true,
+      adminPriceChanged: true,
+      containerSize: true,
+      containersCount: true,
+      pickupDate: true,
+      notes: true,
+      phone: true,
+    },
+  });
+
+  if (!r) notFound();
+
+  const routeLine = toLatinDigits(
+    t("dashboard.admin.routeFromTo").replace("{from}", r.fromText).replace("{to}", r.toText),
+  );
+
+  const createdAt = toLatinDigits(
+    r.createdAt.toLocaleString(dateLocale, {
+      dateStyle: "short",
+      timeStyle: "medium",
+    }),
+  );
+
+  const statusText = shipmentStatusLabel(r.status, t);
+
+  const distanceStr =
+    typeof r.distanceKm === "number" && Number.isFinite(r.distanceKm)
+      ? toLatinDigits(t("dashboard.admin.distanceKmShort").replace("{n}", r.distanceKm.toFixed(1)))
+      : "—";
+
+  const hasCoords =
+    r.fromLat != null && r.fromLng != null && r.toLat != null && r.toLng != null;
+
+  const showAdminPriceChange =
+    ["ADMIN_APPROVED", "AWAITING_PAYMENT_APPROVAL", "COMPLETE"].includes(r.status) &&
+    r.adminPriceChanged &&
+    typeof r.estimatedPriceSar === "number" &&
+    typeof r.priceSar === "number";
 
   return (
-    <div className="w-full min-w-0 max-w-full space-y-6">
+    <div className="mx-auto w-full max-w-4xl space-y-8 pb-12">
       <Link
         href="/dashboard/client/requests"
-        className="text-sm text-muted-foreground hover:underline inline-block"
+        className="group inline-flex items-center gap-2 rounded-xl border border-transparent px-1 py-1 text-sm font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground"
       >
-        ← الطلبات الواردة
+        <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-muted/80 text-foreground transition-colors group-hover:bg-muted">
+          <ArrowLeft className="h-4 w-4 rtl:rotate-180" aria-hidden />
+        </span>
+        {t("dashboard.client.backToIncoming")}
       </Link>
 
-      <h1 className="text-2xl font-bold">تفاصيل طلب النقل</h1>
-
-      <Card className="min-w-0 overflow-hidden">
-        <CardHeader className="pb-2">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-            <span className="font-medium min-w-0 break-words">
-              من {r.fromText} → إلى {r.toText}
-            </span>
-            <span className="text-xs text-muted-foreground shrink-0">
-              {new Date(r.createdAt).toLocaleString("ar-SA")}
-            </span>
+      <header className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 space-y-2">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+              {t("dashboard.client.detailTitle")}
+            </h1>
+            <p className="flex items-start gap-2 text-base font-medium leading-relaxed text-foreground/90">
+              <Route className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
+              <span className="break-words">{routeLine}</span>
+            </p>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <p className="text-muted-foreground">الحالة: {STATUS_LABELS[r.status] ?? r.status}</p>
-          <p className="text-muted-foreground">
-            حجم الحاوية: {r.containerSize ?? "—"} — العدد: {r.containersCount ?? "—"}
-          </p>
-          <p className="text-muted-foreground">
-            نوع الشحنة: {r.shipmentType ?? "—"}
-          </p>
-          <p className="text-muted-foreground">
-            المسافة: {typeof r.distanceKm === "number" ? `${r.distanceKm.toFixed(1)} كم` : "—"}
-          </p>
-          <p className="text-muted-foreground">
-            {r.status === "ADMIN_APPROVED" ? "السعر النهائي" : "السعر التقديري"}:{" "}
-            {typeof r.priceSar === "number" ? formatSar(r.priceSar) : "—"}
-          </p>
-          {r.status === "ADMIN_APPROVED" &&
-            r.adminPriceChanged &&
-            typeof r.estimatedPriceSar === "number" &&
-            typeof r.priceSar === "number" && (
-              <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 p-3 text-sm">
-                تم تعديل السعر بواسطة الأدمن من{" "}
-                <span className="font-semibold">{formatSar(r.estimatedPriceSar)}</span> إلى{" "}
-                <span className="font-semibold">{formatSar(r.priceSar)}</span>.
-              </div>
+          <span
+            className={cn(
+              "inline-flex shrink-0 items-center self-start rounded-full border px-3.5 py-1.5 text-xs font-semibold shadow-sm",
+              statusBadgeClass(r.status),
             )}
-          <p className="text-muted-foreground">تاريخ الاستلام: {r.pickupDate ?? "—"}</p>
-          {r.notes && <p className="break-words">ملاحظات: {r.notes}</p>}
-          {r.fromLat != null &&
-            r.fromLng != null &&
-            r.toLat != null &&
-            r.toLng != null && (
-              <div className="mt-3">
-                <MapboxLocationPreview
-                  from={{ lat: r.fromLat, lng: r.fromLng }}
-                  to={{ lat: r.toLat, lng: r.toLng }}
-                  heightClassName="h-56"
-                  interactive
-                />
-                <div className="mt-3 text-sm text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-block w-3 h-3 rounded-sm bg-[#1b8254]" aria-hidden />
-                    من
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-block w-3 h-3 rounded-sm bg-[#f59e0b]" aria-hidden />
-                    إلى
-                  </div>
-                </div>
-              </div>
-            )}
-          <p className="text-xs text-muted-foreground pt-2">ID: {r.id}</p>
+          >
+            {statusText}
+          </span>
+        </div>
+        <ShipmentRequestProgressBar status={r.status} />
+        <time
+          className="block text-xs text-muted-foreground tabular-nums"
+          dateTime={r.createdAt.toISOString()}
+        >
+          {createdAt}
+        </time>
+      </header>
 
-          <ShipmentRequestActions id={r.id} status={r.status} />
+      <Card className="overflow-hidden rounded-2xl border bg-card shadow-sm ring-1 ring-border/60">
+        <CardContent className="p-0">
+          <div className="border-b bg-gradient-to-l from-primary/[0.08] to-transparent px-4 py-4 sm:px-6 sm:py-5 dark:from-primary/10">
+            <CopyableRequestId id={r.id} compact />
+          </div>
+
+          <div className="space-y-8 p-4 sm:p-6">
+            <section aria-labelledby="shipment-details-heading">
+              <h2 id="shipment-details-heading" className="sr-only">
+                {t("dashboard.client.detailTitle")}
+              </h2>
+              <dl className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
+                  <dt className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    <Package className="h-3.5 w-3.5" aria-hidden />
+                    {t("dashboard.admin.containerCount")}
+                  </dt>
+                  <dd className="mt-2 text-sm font-semibold tabular-nums text-foreground">
+                    {toLatinDigits(`${r.containerSize ?? "—"} — ${r.containersCount ?? "—"}`)}
+                  </dd>
+                </div>
+                <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    {t("dashboard.admin.shipmentType")}
+                  </dt>
+                  <dd className="mt-2 text-sm font-semibold text-foreground">
+                    {r.shipmentType ? toLatinDigits(r.shipmentType) : "—"}
+                  </dd>
+                </div>
+                <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    {t("hero.distance")}
+                  </dt>
+                  <dd className="mt-2 text-sm font-semibold tabular-nums text-foreground">{distanceStr}</dd>
+                </div>
+                <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
+                  <dt className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    <Calendar className="h-3.5 w-3.5" aria-hidden />
+                    {t("dashboard.admin.pickupDate")}
+                  </dt>
+                  <dd className="mt-2 text-sm font-semibold tabular-nums text-foreground">
+                    {r.pickupDate ? toLatinDigits(r.pickupDate) : "—"}
+                  </dd>
+                </div>
+                <div className="rounded-xl border border-border/60 bg-muted/30 p-4 sm:col-span-2">
+                  <dt className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    <Phone className="h-3.5 w-3.5" aria-hidden />
+                    {t("hero.contactPhone")}
+                  </dt>
+                  <dd className="mt-2 text-start text-sm font-semibold text-foreground">
+                    {r.phone?.trim() ? (
+                      <span dir="ltr" translate="no" className="inline-block tabular-nums">
+                        {toLatinDigits(r.phone.trim())}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </dd>
+                </div>
+              </dl>
+            </section>
+
+            <section
+              className="rounded-2xl border border-primary/20 bg-primary/[0.06] p-5 dark:bg-primary/10"
+              aria-labelledby="price-heading"
+            >
+              <h2
+                id="price-heading"
+                className="text-xs font-semibold uppercase tracking-wide text-primary"
+              >
+                {["ADMIN_APPROVED", "AWAITING_PAYMENT_APPROVAL", "COMPLETE"].includes(r.status)
+                  ? t("hero.priceFinal")
+                  : t("hero.price")}
+              </h2>
+              <div className="mt-3">
+                {typeof r.priceSar === "number" ? (
+                  <SarPriceDisplay
+                    amount={r.priceSar}
+                    locale={locale}
+                    className="space-y-1"
+                    amountClassName="text-3xl font-bold tracking-tight text-primary tabular-nums sm:text-4xl"
+                    wordsClassName="mt-2 text-sm font-medium leading-relaxed text-muted-foreground sm:text-base"
+                  />
+                ) : (
+                  <p className="text-lg font-medium text-muted-foreground">—</p>
+                )}
+              </div>
+              {showAdminPriceChange && (
+                <div className="mt-4">
+                  <ShipmentPriceChangeAlert
+                    estimatedPriceSar={r.estimatedPriceSar!}
+                    priceSar={r.priceSar!}
+                    locale={locale}
+                  />
+                </div>
+              )}
+            </section>
+
+            {r.notes?.trim() && (
+              <section
+                className="rounded-xl border border-dashed border-border bg-muted/20 p-4"
+                aria-labelledby="notes-heading"
+              >
+                <h2
+                  id="notes-heading"
+                  className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                >
+                  <StickyNote className="h-3.5 w-3.5" aria-hidden />
+                  {t("dashboard.admin.notes")}
+                </h2>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-foreground">{r.notes}</p>
+              </section>
+            )}
+
+            {hasCoords && (
+              <section className="space-y-3" aria-labelledby="map-heading">
+                <h2
+                  id="map-heading"
+                  className="flex items-center gap-2 text-sm font-semibold text-foreground"
+                >
+                  <MapPinned className="h-4 w-4 text-primary" aria-hidden />
+                  {t("dashboard.client.mapLegend")}
+                </h2>
+                <div className="overflow-hidden rounded-2xl border border-border/80 bg-muted/40 shadow-inner ring-1 ring-black/5 dark:ring-white/10">
+                  <MapboxLocationPreview
+                    from={{ lat: r.fromLat as number, lng: r.fromLng as number }}
+                    to={{ lat: r.toLat as number, lng: r.toLng as number }}
+                    heightClassName="h-[min(420px,55vh)] min-h-[240px] w-full sm:h-[min(440px,50vh)]"
+                    interactive
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
+                  <span className="inline-flex items-center gap-2">
+                    <span className="inline-block h-3 w-3 rounded-sm bg-[#1b8254]" aria-hidden />
+                    {t("hero.from").replace(":", "").trim()}
+                  </span>
+                  <span className="inline-flex items-center gap-2">
+                    <span className="inline-block h-3 w-3 rounded-sm bg-[#f59e0b]" aria-hidden />
+                    {t("hero.to").replace(":", "").trim()}
+                  </span>
+                </div>
+              </section>
+            )}
+
+            <div className="border-t border-border pt-6">
+              <ShipmentRequestActions id={r.id} status={r.status} />
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
   );
 }
-

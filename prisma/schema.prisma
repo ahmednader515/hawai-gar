@@ -146,8 +146,10 @@ model NewsItem {
   titleAr    String
   titleEn    String?
   category   String
+  categoryEn String?
   imageUrl   String
   excerpt    String?
+  excerptEn  String?
   link       String?
   publishedAt DateTime
   createdAt  DateTime @default(now())
@@ -161,6 +163,7 @@ model CustomerAdvisory {
   titleAr     String
   titleEn     String?
   excerpt     String?
+  excerptEn   String?
   publishedAt DateTime
   link        String?
   createdAt   DateTime @default(now())
@@ -198,6 +201,10 @@ model ShipmentRequest {
   carrierDecisionAt DateTime?
   adminId         String?
   adminDecisionAt DateTime?
+  /// Payment / invoice URL shown to the company when tracking (set by admin).
+  invoiceLink     String?
+  /// Company-uploaded image of paid invoice / receipt (UploadThing URL).
+  invoiceImageUrl String?
   createdAt       DateTime @default(now())
 
   @@index([createdAt])
