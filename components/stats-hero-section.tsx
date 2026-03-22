@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useI18n } from "@/components/providers/i18n-provider";
 
@@ -21,22 +22,39 @@ const STATS_ICONS = [
 const STAT_VALUE_KEYS = ["9+", "50+", "100+", "50+"] as const;
 const STAT_LABEL_KEYS = ["stat1", "stat2", "stat3", "stat4"] as const;
 
-export function StatsHeroSection() {
+export function StatsHeroSection({
+  useStaticBackground = false,
+}: {
+  /** When true, avoid ~9MB MP4 on cellular (use optimized image instead) */
+  useStaticBackground?: boolean;
+}) {
   const { t } = useI18n();
 
   return (
     <section id="about" className="relative min-h-[70vh] sm:min-h-[80vh] md:min-h-[85vh] flex flex-col justify-between overflow-hidden">
       <div className="absolute inset-0 z-0">
-        <video
-          className="absolute inset-0 h-full w-full object-cover object-center"
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="none"
-        >
-          <source src="/video-2.mp4" type="video/mp4" />
-        </video>
+        {useStaticBackground ? (
+          <Image
+            src="/land-shipping-4.png"
+            alt=""
+            fill
+            className="object-cover object-center"
+            sizes="100vw"
+            quality={80}
+          />
+        ) : (
+          <video
+            className="absolute inset-0 h-full w-full object-cover object-center"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            poster="/land-shipping-4.png"
+          >
+            <source src="/video-2.mp4" type="video/mp4" />
+          </video>
+        )}
         <div className="absolute inset-0 bg-foreground/60" />
       </div>
 

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import "./globals.css";
+import { NavigationLoading } from "@/components/navigation-loading";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { I18nProvider } from "@/components/providers/i18n-provider";
 import { DEFAULT_LOCALE, isAppLocale, type AppLocale } from "@/lib/i18n/config";
@@ -34,6 +35,7 @@ export default async function RootLayout({
       <body className="font-sans antialiased">
         <SessionProvider>
           <I18nProvider locale={locale} messagesByLocale={messagesByLocale}>
+            <NavigationLoading />
             {children}
           </I18nProvider>
         </SessionProvider>

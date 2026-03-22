@@ -4,9 +4,11 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { HeroSection } from "@/components/hero-section";
 import { prisma } from "@/lib/db";
+import { prefersLightweightMedia } from "@/lib/prefers-lightweight-media";
 import { getHeroContact } from "@/lib/site-settings";
 import { unstable_cache } from "next/cache";
 import { getTranslations } from "@/lib/i18n/server";
+import { headers } from "next/headers";
 
 /** Below-the-fold sections: separate chunks so first paint ships less JS */
 function BelowFoldSkeleton({ className = "min-h-[12rem]" }: { className?: string }) {
@@ -87,6 +89,8 @@ function HomeSectionSeparator({ flip = true }: { flip?: boolean }) {
 export default async function Home() {
   const t = await getTranslations();
   const session = await auth();
+  const h = await headers();
+  const useStaticBg = prefersLightweightMedia(h.get("user-agent"), h.get("save-data"));
   let newsItems: Awaited<ReturnType<typeof prisma.newsItem.findMany>> = [];
   let advisories: Awaited<ReturnType<typeof prisma.customerAdvisory.findMany>> = [];
   let heroContact = { email: "info@hawajgar.com", phone: null as string | null };
@@ -109,7 +113,7 @@ export default async function Home() {
       <HomeSectionSeparator />
       <FeatureCarouselSection />
       <HomeSectionSeparator flip={false} />
-      <StatsHeroSection />
+      <StatsHeroSection useStaticBackground={useStaticBg} />
       <HomeSectionSeparator />
       <NewsSection items={newsItems.length > 0 ? newsItems : undefined} />
       <HomeSectionSeparator flip={false} />

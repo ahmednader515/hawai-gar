@@ -57,6 +57,7 @@ export function FeatureCarouselSection() {
                   fill
                   className="object-cover"
                   sizes="(max-width: 768px) 100vw, 60vw"
+                  quality={75}
                 />
                 <div className="absolute inset-0 bg-foreground/20" />
               </div>

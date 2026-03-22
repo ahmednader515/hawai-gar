@@ -273,7 +273,7 @@ export function HeroSection({
 
   return (
     <section className="relative min-h-[70vh] sm:min-h-[80vh] md:min-h-[85vh] flex flex-col overflow-hidden">
-      {/* Background */}
+      {/* Background: video only — no poster image (avoids flash of hero.png before video) */}
       <div className="absolute inset-0 z-0">
         <video
           className="absolute inset-0 h-full w-full object-cover"
@@ -281,7 +281,7 @@ export function HeroSection({
           muted
           loop
           playsInline
-          preload="none"
+          preload="metadata"
         >
           <source src="/video-1.mp4" type="video/mp4" />
         </video>
@@ -458,8 +458,9 @@ export function HeroSection({
                   alt={t("hero.partnersAlt")}
                   fill
                   className="object-contain p-3"
-                  sizes="(max-width: 768px) 100vw, 448px"
-                  priority={false}
+                  sizes="(max-width: 768px) min(100vw, 448px), 448px"
+                  priority
+                  quality={85}
                 />
               </div>
             </div>

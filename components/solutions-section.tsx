@@ -68,7 +68,14 @@ export function SolutionsSection() {
 
       <div className="relative min-h-[380px] sm:min-h-[420px] md:min-h-[500px]">
         <div className="absolute inset-0 z-0">
-          <Image src={SOLUTIONS[0].image} alt="" fill className="object-cover object-center" sizes="100vw" />
+          <Image
+            src={SOLUTIONS[0].image}
+            alt=""
+            fill
+            className="object-cover object-center"
+            sizes="100vw"
+            quality={72}
+          />
           <div className="absolute inset-0 bg-slate-900/40" />
         </div>
 
@@ -81,7 +88,14 @@ export function SolutionsSection() {
               pointerEvents: "none",
             }}
           >
-            <Image src={solution.image} alt="" fill className="object-cover object-center" sizes="100vw" />
+            <Image
+              src={solution.image}
+              alt=""
+              fill
+              className="object-cover object-center"
+              sizes="100vw"
+              quality={72}
+            />
             <div className="absolute inset-0 bg-slate-900/40" />
           </div>
         ))}
