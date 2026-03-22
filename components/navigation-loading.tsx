@@ -11,13 +11,15 @@ const MIN_LOADING_MS = 1000;
 /** Loading overlay never stays longer than this from when it was armed (ms). */
 const MAX_LOADING_MS = 3000;
 
+type ArmMode = "none" | "initial" | "navigation";
+
 /**
- * Shows the truck loader during client navigations while the next route is
- * loading / compiling (RSC fetch). Covers Link clicks, form GET navigations,
- * and browser back/forward.
+ * Shows the truck loader on:
+ * - first paint / full page load & refresh (initial)
+ * - client navigations (click links, GET forms) — wait until URL updates
+ * - browser back/forward — same as navigation (popstate captures route before arm)
  *
- * Important: we arm loading in setTimeout(0) after click so the browser can
- * perform the default navigation before React paints the full-screen overlay.
+ * Click handlers use setTimeout(0) so the default navigation runs before the overlay.
  */
 function NavigationLoadingInner() {
   const pathname = usePathname();
@@ -25,16 +27,19 @@ function NavigationLoadingInner() {
   const [pending, setPending] = useState(false);
   const [truckRun, setTruckRun] = useState<TruckRunSpec | null>(null);
 
-  const pendingRef = useRef(false);
-  pendingRef.current = pending;
+  const routeKey = `${pathname}?${searchParams.toString()}`;
+  const routeKeyRef = useRef(routeKey);
+  routeKeyRef.current = routeKey;
 
   const loadStartedAtRef = useRef<number | null>(null);
   const truckIdRef = useRef(0);
   const maxTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  /** Avoid firing truck twice for the same route (e.g. Strict Mode). */
-  const lastTruckForRouteKeyRef = useRef<string | null>(null);
+  /** Dedupe truck start for same route + arm (Strict Mode / double effects). */
+  const truckScheduledForRouteKeyRef = useRef<string | null>(null);
 
-  const routeKey = `${pathname}?${searchParams.toString()}`;
+  const armModeRef = useRef<ArmMode>("none");
+  /** For navigation: React route key at arm time (must change before we run the truck). */
+  const armedAtRouteKeyRef = useRef<string | null>(null);
 
   const clearLoading = useCallback(() => {
     if (maxTimerRef.current) {
@@ -44,34 +49,80 @@ function NavigationLoadingInner() {
     setPending(false);
     setTruckRun(null);
     loadStartedAtRef.current = null;
-    lastTruckForRouteKeyRef.current = null;
+    truckScheduledForRouteKeyRef.current = null;
+    armModeRef.current = "none";
+    armedAtRouteKeyRef.current = null;
   }, []);
 
   const clearLoadingRef = useRef(clearLoading);
   clearLoadingRef.current = clearLoading;
 
-  /** Defer so <a> default navigation / form submit runs before overlay paints. */
-  const armLoading = useCallback(() => {
-    window.setTimeout(() => {
-      loadStartedAtRef.current = Date.now();
-      lastTruckForRouteKeyRef.current = null;
-      setPending(true);
-      setTruckRun(null);
+  const armCommon = useCallback(() => {
+    loadStartedAtRef.current = Date.now();
+    truckScheduledForRouteKeyRef.current = null;
+    setTruckRun(null);
+    setPending(true);
 
-      if (maxTimerRef.current) clearTimeout(maxTimerRef.current);
-      maxTimerRef.current = setTimeout(() => {
-        clearLoadingRef.current();
-      }, MAX_LOADING_MS);
-    }, 0);
+    if (maxTimerRef.current) clearTimeout(maxTimerRef.current);
+    maxTimerRef.current = setTimeout(() => {
+      clearLoadingRef.current();
+    }, MAX_LOADING_MS);
   }, []);
 
-  /** When the route updates, compute truck duration (one shot left → right), capped by MAX_LOADING_MS from arm. */
+  /** Link / form: defer overlay until after default navigation. */
+  const armLoadingFromInteraction = useCallback(() => {
+    window.setTimeout(() => {
+      armModeRef.current = "navigation";
+      armedAtRouteKeyRef.current = routeKeyRef.current;
+      armCommon();
+    }, 0);
+  }, [armCommon]);
+
+  /** Full load & refresh: show loader for current URL (no route change to wait for). */
+  const initialArmOnceRef = useRef(false);
   useEffect(() => {
-    if (!pendingRef.current) return;
+    if (initialArmOnceRef.current) return;
+    initialArmOnceRef.current = true;
+    window.setTimeout(() => {
+      armModeRef.current = "initial";
+      armedAtRouteKeyRef.current = null;
+      armCommon();
+    }, 0);
+  }, [armCommon]);
+
+  /** Back / forward: capture React route key now (still “old” page), then arm like a navigation. */
+  const onPopState = useCallback(() => {
+    const keyWhenEventFired = routeKeyRef.current;
+    window.setTimeout(() => {
+      armModeRef.current = "navigation";
+      armedAtRouteKeyRef.current = keyWhenEventFired;
+      armCommon();
+    }, 0);
+  }, [armCommon]);
+
+  /** Run when `pending` or `routeKey` changes so initial load schedules without a URL change. */
+  useEffect(() => {
+    if (!pending) return;
     const arm = loadStartedAtRef.current;
     if (arm === null) return;
-    if (lastTruckForRouteKeyRef.current === routeKey) return;
-    lastTruckForRouteKeyRef.current = routeKey;
+
+    const mode = armModeRef.current;
+
+    if (mode === "initial") {
+      if (truckScheduledForRouteKeyRef.current === routeKey) return;
+      truckScheduledForRouteKeyRef.current = routeKey;
+      armModeRef.current = "none";
+    } else if (mode === "navigation") {
+      const armedAt = armedAtRouteKeyRef.current;
+      if (armedAt === null) return;
+      if (routeKey === armedAt) return;
+      if (truckScheduledForRouteKeyRef.current === routeKey) return;
+      truckScheduledForRouteKeyRef.current = routeKey;
+      armModeRef.current = "none";
+      armedAtRouteKeyRef.current = null;
+    } else {
+      return;
+    }
 
     const now = Date.now();
     const timeLeft = arm + MAX_LOADING_MS - now;
@@ -89,7 +140,7 @@ function NavigationLoadingInner() {
 
     truckIdRef.current += 1;
     setTruckRun({ id: truckIdRef.current, durationMs });
-  }, [routeKey]);
+  }, [pending, routeKey]);
 
   const onClickCapture = useCallback(
     (e: MouseEvent) => {
@@ -117,9 +168,9 @@ function NavigationLoadingInner() {
       const current = `${window.location.pathname}${window.location.search}`;
       if (next === current) return;
 
-      armLoading();
+      armLoadingFromInteraction();
     },
-    [armLoading],
+    [armLoadingFromInteraction],
   );
 
   useEffect(() => {
@@ -127,9 +178,8 @@ function NavigationLoadingInner() {
       const form = (e as SubmitEvent).target;
       if (!(form instanceof HTMLFormElement)) return;
       if (form.method.toLowerCase() !== "get") return;
-      armLoading();
+      armLoadingFromInteraction();
     };
-    const onPopState = () => armLoading();
     window.addEventListener("click", onClickCapture, true);
     window.addEventListener("submit", onSubmitCapture, true);
     window.addEventListener("popstate", onPopState);
@@ -138,7 +188,7 @@ function NavigationLoadingInner() {
       window.removeEventListener("submit", onSubmitCapture, true);
       window.removeEventListener("popstate", onPopState);
     };
-  }, [onClickCapture, armLoading]);
+  }, [onClickCapture, armLoadingFromInteraction, onPopState]);
 
   if (!pending) return null;
   return (

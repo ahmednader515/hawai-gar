@@ -1,8 +1,8 @@
 "use client";
 
-import { Truck } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useI18n } from "@/components/providers/i18n-provider";
+import { TruckIcon, type TruckIconHandle } from "@/components/truck-icon";
 import {
   getShipmentRequestProgressPercent,
   isShipmentRequestRejected,
@@ -20,9 +20,15 @@ type Props = {
 
 export function ShipmentRequestProgressBar({ status, className }: Props) {
   const { t, locale } = useI18n();
+  const truckRef = useRef<TruckIconHandle>(null);
   const percent = useMemo(() => getShipmentRequestProgressPercent(status), [status]);
   const rejected = isShipmentRequestRejected(status);
   const rtl = locale === "ar";
+
+  useEffect(() => {
+    truckRef.current?.startAnimation();
+    return () => truckRef.current?.stopAnimation();
+  }, []);
 
   const steps = useMemo(
     () => [
@@ -87,11 +93,14 @@ export function ShipmentRequestProgressBar({ status, className }: Props) {
                 }
           }
         >
-          <Truck
-            className={cn("h-4 w-4 transition-transform", rtl && "-scale-x-100")}
-            strokeWidth={2.25}
-            aria-hidden
-          />
+          <div className={cn("flex items-center justify-center", rtl && "-scale-x-100")}>
+            <TruckIcon
+              ref={truckRef}
+              size={22}
+              className="text-primary [&_svg]:block [&_svg]:max-w-none [&_path]:stroke-current [&_circle]:stroke-current [&_line]:stroke-current"
+              aria-hidden
+            />
+          </div>
         </div>
 
         <ul
