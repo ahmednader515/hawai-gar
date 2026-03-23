@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { Trash2 } from "lucide-react";
 import { DashboardListSearch } from "@/components/dashboard-list-search";
+import { Button } from "@/components/ui/button";
 import { AR_LOCALE_LATN } from "@/lib/locale";
 import { useI18n } from "@/components/providers/i18n-provider";
 
@@ -24,9 +27,28 @@ function matches(q: string, r: NewsTableRow, dateLocale: string) {
 
 export function NewsManageTable({ items }: { items: NewsTableRow[] }) {
   const { t, locale } = useI18n();
+  const router = useRouter();
   const [q, setQ] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const dateLocale = locale === "ar" ? AR_LOCALE_LATN : "en-GB";
   const filtered = useMemo(() => items.filter((r) => matches(q, r, dateLocale)), [items, q, dateLocale]);
+
+  async function handleDelete(id: string) {
+    if (!window.confirm(t("dashboard.admin.tableDeleteConfirmNews"))) return;
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/admin/news/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        window.alert(t("dashboard.admin.tableDeleteError"));
+        return;
+      }
+      router.refresh();
+    } catch {
+      window.alert(t("dashboard.admin.tableDeleteError"));
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -66,9 +88,26 @@ export function NewsManageTable({ items }: { items: NewsTableRow[] }) {
                   <td className="p-3">{item.category}</td>
                   <td className="p-3">{new Date(item.publishedAt).toLocaleDateString(dateLocale)}</td>
                   <td className="p-3">
-                    <Link href={`/dashboard/admin/news/${item.id}`} className="text-primary hover:underline font-medium">
-                      {t("dashboard.admin.tableEdit")}
-                    </Link>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link
+                        href={`/dashboard/admin/news/${item.id}`}
+                        className="text-primary hover:underline font-medium"
+                      >
+                        {t("dashboard.admin.tableEdit")}
+                      </Link>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="gap-1"
+                        disabled={deletingId === item.id}
+                        onClick={() => void handleDelete(item.id)}
+                        aria-label={t("dashboard.admin.tableDelete")}
+                      >
+                        <Trash2 className="size-3.5" aria-hidden />
+                        {deletingId === item.id ? t("dashboard.admin.tableDeleting") : t("dashboard.admin.tableDelete")}
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))
