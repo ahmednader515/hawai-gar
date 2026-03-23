@@ -362,11 +362,17 @@ export function HeroSection({
 
       {/* Top Navbar: logo + inline links on desktop; mobile keeps drawer */}
       <header className="relative z-20 border-b border-white/20 bg-black/40 backdrop-blur-sm">
-        <div className="container mx-auto flex h-16 items-center justify-between gap-3 px-4">
+        <div className="container mx-auto flex h-16 items-center justify-between gap-2 px-3 sm:gap-3 sm:px-4">
           {/* Start: brand + desktop nav links in one bar */}
-          <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4 md:gap-6">
-            <Link href="/" className="flex shrink-0 items-center gap-2">
-              <Image src="/logo.png" alt="hawai GAR" width={48} height={48} className="object-contain size-auto" />
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4 md:gap-6">
+            <Link href="/" className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+              <Image
+                src="/logo.png"
+                alt="hawai GAR"
+                width={48}
+                height={48}
+                className="object-contain h-9 w-9 sm:h-12 sm:w-12"
+              />
               <span className="text-xl font-bold text-white hidden sm:inline">hawai GAR</span>
             </Link>
             <nav
@@ -386,29 +392,29 @@ export function HeroSection({
           </div>
 
           {/* End: mobile menu + language + auth */}
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3 md:gap-4">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2 md:gap-4">
             <div className="flex shrink-0 items-center md:hidden">
               <button
                 type="button"
-                className="p-2 text-white/90 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+                className="p-1.5 text-white/90 hover:text-white rounded-lg hover:bg-white/10 transition-colors sm:p-2"
                 aria-label={t("common.openMenu")}
                 aria-expanded={sidebarOpen}
                 onClick={() => setSidebarOpen(true)}
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
             </div>
             <LanguageSwitcher variant="hero" className="shrink-0" />
             <div className="h-5 sm:h-6 w-px bg-white/40 shrink-0 hidden sm:block" aria-hidden />
-            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
               {isLoggedIn ? (
                 <>
                   {userRole !== "COMPANY" ? (
                     <Link
                       href="/dashboard"
-                      className="px-2.5 py-1.5 sm:px-3 rounded-lg text-xs sm:text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap"
+                      className="px-2.5 py-1.5 rounded-md text-xs font-medium sm:px-3 sm:py-1.5 sm:rounded-lg sm:text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap"
                     >
                       {t("common.dashboard")}
                     </Link>
@@ -416,7 +422,7 @@ export function HeroSection({
                   <button
                     type="button"
                     onClick={() => signOut({ callbackUrl: "/" })}
-                    className="px-2.5 py-1.5 sm:px-3 rounded-lg text-xs sm:text-sm font-medium text-white border border-white/60 hover:bg-white/10 hover:border-white/80 transition-colors whitespace-nowrap"
+                    className="px-2.5 py-1.5 rounded-md text-xs font-medium sm:px-3 sm:py-1.5 sm:rounded-lg sm:text-sm text-white border border-white/60 hover:bg-white/10 hover:border-white/80 transition-colors whitespace-nowrap"
                   >
                     {t("common.logout")}
                   </button>
@@ -425,7 +431,7 @@ export function HeroSection({
                 <>
                   <Link
                     href="/login"
-                    className="px-2.5 py-1.5 sm:px-3 rounded-lg text-xs sm:text-sm font-medium text-white border border-white/60 hover:bg-white/10 hover:border-white/80 transition-colors whitespace-nowrap"
+                    className="px-2.5 py-1.5 rounded-md text-xs font-medium sm:px-3 sm:py-1.5 sm:rounded-lg sm:text-sm text-white border border-white/60 hover:bg-white/10 hover:border-white/80 transition-colors whitespace-nowrap"
                   >
                     {t("common.login")}
                   </Link>
@@ -725,18 +731,18 @@ export function HeroSection({
                   {userRole === "COMPANY" ? (
                     <p className="text-xs text-muted-foreground leading-snug">{t("hero.trackSaveIdHint")}</p>
                   ) : null}
-                  <div className="flex gap-2">
+                  <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch">
                     <input
                       value={trackingId}
                       onChange={(e) => setTrackingId(e.target.value)}
                       placeholder={t("hero.trackPlaceholder")}
-                      className="flex-1 h-12 rounded-lg border border-gray-200 bg-gray-50 px-3 text-base focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                      className="min-w-0 h-11 w-full flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 text-base focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary sm:h-12"
                     />
                     <button
                       type="button"
                       onClick={() => trackShipmentRequest()}
                       disabled={trackingLoading}
-                      className="h-12 px-6 rounded-xl bg-primary hover:bg-primary/90 disabled:opacity-70 disabled:cursor-not-allowed text-primary-foreground font-semibold text-base transition-colors"
+                      className="h-11 w-full shrink-0 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70 sm:h-12 sm:w-auto sm:px-5 sm:text-base"
                     >
                       {trackingLoading ? t("hero.tracking") : t("hero.track")}
                     </button>

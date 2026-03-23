@@ -28,6 +28,13 @@ export async function POST(
       return NextResponse.json({ error: "الطلب غير موجود" }, { status: 404 });
     }
 
+    const safeRequestSelect = {
+      id: true,
+      status: true,
+      carrierId: true,
+      carrierDecisionAt: true,
+    } as const;
+
     if (decision === "accept") {
       if (existing.status !== "PENDING_CARRIER") {
         return NextResponse.json({ error: "لا يمكن قبول هذا الطلب" }, { status: 400 });
@@ -39,6 +46,7 @@ export async function POST(
           carrierId: session.user.id,
           carrierDecisionAt: new Date(),
         },
+        select: safeRequestSelect,
       });
       return NextResponse.json({ ok: true, request: updated });
     }
@@ -54,6 +62,7 @@ export async function POST(
         carrierId: session.user.id,
         carrierDecisionAt: new Date(),
       },
+      select: safeRequestSelect,
     });
     return NextResponse.json({ ok: true, request: updated });
   } catch (e) {

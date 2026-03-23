@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Calendar, MapPinned, Package, Phone, Route, StickyNote } from "lucide-react";
+import { ArrowLeft, Calendar, MapPinned, Package, Route, StickyNote } from "lucide-react";
 import { getLocale, getTranslations } from "@/lib/i18n/server";
 import { prisma } from "@/lib/db";
 import { Card, CardContent } from "@/components/ui/card";
@@ -71,7 +71,6 @@ export default async function ClientShipmentRequestDetailPage({
       containersCount: true,
       pickupDate: true,
       notes: true,
-      phone: true,
     },
   });
 
@@ -187,21 +186,6 @@ export default async function ClientShipmentRequestDetailPage({
                   </dt>
                   <dd className="mt-2 text-sm font-semibold tabular-nums text-foreground">
                     {r.pickupDate ? toLatinDigits(r.pickupDate) : "—"}
-                  </dd>
-                </div>
-                <div className="rounded-xl border border-border/60 bg-muted/30 p-4 sm:col-span-2">
-                  <dt className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    <Phone className="h-3.5 w-3.5" aria-hidden />
-                    {t("hero.contactPhone")}
-                  </dt>
-                  <dd className="mt-2 text-start text-sm font-semibold text-foreground">
-                    {r.phone?.trim() ? (
-                      <span dir="ltr" translate="no" className="inline-block tabular-nums">
-                        {toLatinDigits(r.phone.trim())}
-                      </span>
-                    ) : (
-                      "—"
-                    )}
                   </dd>
                 </div>
               </dl>

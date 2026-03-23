@@ -33,7 +33,7 @@ export function LanguageSwitcher({ variant = "default", className }: { variant?:
       type="button"
       onClick={() => void setLocale(loc)}
       className={cn(
-        "rounded-md px-2.5 py-1 text-xs font-semibold transition-colors min-h-[32px] min-w-[2.5rem]",
+        "rounded-md px-2 py-1 text-xs font-semibold leading-tight transition-colors min-h-[32px] min-w-[2.35rem] sm:px-2.5 sm:py-1 sm:min-h-[32px] sm:min-w-[2.5rem] sm:leading-normal",
         locale === loc ? v.active : v.inactive,
       )}
       aria-pressed={locale === loc}
@@ -44,7 +44,11 @@ export function LanguageSwitcher({ variant = "default", className }: { variant?:
 
   return (
     <div
-      className={cn("inline-flex items-center gap-0.5 rounded-lg border p-0.5", v.wrap, className)}
+      className={cn(
+        "inline-flex items-center gap-0.5 rounded-md border p-1 sm:gap-0.5 sm:rounded-lg sm:p-0.5",
+        v.wrap,
+        className,
+      )}
       role="group"
       aria-label={t("language.switchAria")}
     >
