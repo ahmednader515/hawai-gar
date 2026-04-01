@@ -2,7 +2,9 @@
 
 import { useState, type ReactNode } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useI18n } from "@/components/providers/i18n-provider";
+import { SOLUTION_IMAGE_LAYOUT, SOLUTION_IMAGES, type SolutionSlug } from "@/lib/solutions-config";
 
 const SOLUTION_ICONS: Record<string, ReactNode> = {
   shipping: (
@@ -37,11 +39,11 @@ const SOLUTION_ICONS: Record<string, ReactNode> = {
   ),
 };
 
-const SOLUTION_DEFS = [
-  { id: "shipping", image: "/land-shipping-1.png", titleKey: "solutions.shipping" as const },
-  { id: "inland", image: "/land-shipping-2.png", titleKey: "solutions.inland" as const },
-  { id: "digital", image: "/land-shipping-3.png", titleKey: "solutions.digital" as const },
-  { id: "cargo", image: "/hero.png", titleKey: "solutions.cargo" as const },
+const SOLUTION_DEFS: { id: SolutionSlug; titleKey: string }[] = [
+  { id: "shipping", titleKey: "solutions.shipping" },
+  { id: "inland", titleKey: "solutions.inland" },
+  { id: "digital", titleKey: "solutions.digital" },
+  { id: "cargo", titleKey: "solutions.cargo" },
 ];
 
 export function SolutionsSection() {
@@ -50,6 +52,8 @@ export function SolutionsSection() {
 
   const SOLUTIONS = SOLUTION_DEFS.map((d) => ({
     ...d,
+    image: SOLUTION_IMAGES[d.id],
+    imageClass: SOLUTION_IMAGE_LAYOUT[d.id],
     icon: SOLUTION_ICONS[d.id],
     title: t(d.titleKey),
   }));
@@ -66,13 +70,17 @@ export function SolutionsSection() {
         </div>
       </div>
 
-      <div className="relative min-h-[380px] sm:min-h-[420px] md:min-h-[500px]">
+      <div
+        className="relative min-h-[380px] sm:min-h-[420px] md:min-h-[500px]"
+        onMouseLeave={() => setHoveredCard(null)}
+      >
         <div className="absolute inset-0 z-0">
           <Image
+            key="solutions-base"
             src={SOLUTIONS[0].image}
             alt=""
             fill
-            className="object-cover object-center"
+            className={SOLUTIONS[0].imageClass}
             sizes="100vw"
             quality={72}
           />
@@ -89,10 +97,11 @@ export function SolutionsSection() {
             }}
           >
             <Image
+              key={`solutions-hover-${solution.id}`}
               src={solution.image}
               alt=""
               fill
-              className="object-cover object-center"
+              className={solution.imageClass}
               sizes="100vw"
               quality={72}
             />
@@ -100,24 +109,25 @@ export function SolutionsSection() {
           </div>
         ))}
 
-        <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 h-full min-h-[380px] sm:min-h-[420px] md:min-h-[500px]">
+        <div className="relative z-10 grid h-full min-h-[380px] grid-cols-1 sm:min-h-[420px] sm:grid-cols-2 md:min-h-[500px] lg:grid-cols-4">
           {SOLUTIONS.map((solution, index) => (
-            <div
+            <Link
               key={solution.id}
-              className="relative flex flex-col items-center justify-center p-4 sm:p-6 text-white cursor-pointer"
+              href={`/solutions/${solution.id}`}
+              className="relative flex min-h-[140px] flex-col items-center justify-center p-4 text-white outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent sm:min-h-0 sm:p-6"
               onMouseEnter={() => setHoveredCard(solution.id)}
             >
               <div
-                className={`absolute inset-0 bg-gradient-to-b from-blue-900/50 via-blue-900/40 to-slate-900/80 transition-opacity duration-300 opacity-70 hover:opacity-60 border-white/35
-                  ${index > 0 ? "border-t sm:border-t-0 sm:border-l" : ""}
-                  ${index < SOLUTIONS.length - 1 ? "border-b sm:border-b-0 sm:border-r" : ""}
+                className={`absolute inset-0 border-white/35 bg-gradient-to-b from-blue-900/50 via-blue-900/40 to-slate-900/80 opacity-70 transition-opacity duration-300 hover:opacity-60
+                  ${index > 0 ? "border-t sm:border-t-0 sm:border-s" : ""}
+                  ${index < SOLUTIONS.length - 1 ? "border-b sm:border-b-0 sm:border-e" : ""}
                 `}
               />
-              <div className="relative z-10 flex flex-col items-center justify-center w-full h-full">
-                <div className="w-16 h-16 md:w-20 md:h-20 mb-4 md:mb-6">{solution.icon}</div>
-                <h3 className="text-center font-semibold text-lg md:text-xl leading-tight">{solution.title}</h3>
+              <div className="relative z-10 flex h-full w-full flex-col items-center justify-center">
+                <div className="mb-4 h-16 w-16 md:mb-6 md:h-20 md:w-20">{solution.icon}</div>
+                <h3 className="text-center text-lg font-semibold leading-tight md:text-xl">{solution.title}</h3>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>
