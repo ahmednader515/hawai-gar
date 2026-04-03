@@ -15,7 +15,7 @@ const PLACEHOLDER_NEWS = [
     category: "النقل البري والخدمات اللوجستية",
     categoryEn: "Land transport",
     imageUrl: "/land-shipping-1.png",
-    excerpt: "خدمات نقل حاويات موثوقة بين المدن والمحطات الجافة",
+    excerpt: "خدمات نقل حاويات موثوقة بين مدن المملكة",
     excerptEn: "Reliable container services",
     link: "#",
     publishedAt: new Date("2026-03-09"),

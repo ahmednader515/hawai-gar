@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { SOLUTION_IMAGE_LAYOUT, SOLUTION_IMAGES, type SolutionSlug } from "@/lib/solutions-config";
 
@@ -114,7 +115,7 @@ export function SolutionsSection() {
             <Link
               key={solution.id}
               href={`/solutions/${solution.id}`}
-              className="relative flex min-h-[140px] flex-col items-center justify-center p-4 text-white outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent sm:min-h-0 sm:p-6"
+              className="group relative flex min-h-[140px] flex-col items-center justify-center p-4 text-white outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent sm:min-h-0 sm:p-6"
               onMouseEnter={() => setHoveredCard(solution.id)}
             >
               <div
@@ -126,6 +127,13 @@ export function SolutionsSection() {
               <div className="relative z-10 flex h-full w-full flex-col items-center justify-center">
                 <div className="mb-4 h-16 w-16 md:mb-6 md:h-20 md:w-20">{solution.icon}</div>
                 <h3 className="text-center text-lg font-semibold leading-tight md:text-xl">{solution.title}</h3>
+                <span className="mt-3 inline-flex items-center gap-0.5 text-sm font-medium text-white/95 transition-transform duration-200 group-hover:translate-y-0.5">
+                  <span>{t("solutions.discoverMore")}</span>
+                  <ChevronRight
+                    className="size-4 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5 rtl:-scale-x-100 rtl:group-hover:-translate-x-0.5"
+                    aria-hidden
+                  />
+                </span>
               </div>
             </Link>
           ))}

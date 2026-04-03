@@ -36,7 +36,7 @@ const PLACEHOLDER_ADVISORIES = [
   },
   {
     id: "4",
-    titleAr: "توسيع التغطية - الربط بين المدن والمحطات الجافة",
+    titleAr: "توسيع التغطية - ربط المدن بشبكة النقل",
     titleEn: "Expanded coverage",
     excerpt: "إضافة مسارات جديدة للنقل البري",
     excerptEn: "New inland routes",

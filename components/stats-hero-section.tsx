@@ -67,7 +67,7 @@ export function StatsHeroSection({
           {t("stats.body")}
         </p>
         <Link
-          href="/news"
+          href="/about"
           className="inline-flex items-center gap-2 rounded-full border-2 border-primary bg-transparent px-5 py-2.5 sm:px-6 sm:py-3 text-white text-sm sm:text-base font-medium hover:bg-primary/20 transition-colors touch-manipulation"
         >
           <span>{t("stats.cta")}</span>

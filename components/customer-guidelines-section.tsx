@@ -47,8 +47,8 @@ const PLACEHOLDER_ADVISORIES: CustomerAdvisoryType[] = [
   },
   {
     id: "4",
-    titleAr: "توسيع التغطية - الربط بين المدن والمحطات الجافة",
-    titleEn: "Expanded coverage - City and dry port connectivity",
+    titleAr: "توسيع التغطية - ربط المدن بشبكة النقل",
+    titleEn: "Expanded coverage - Connecting cities across our network",
     excerpt: "إضافة مسارات جديدة للنقل البري",
     excerptEn: "New inland routes added",
     publishedAt: new Date("2026-03-08"),

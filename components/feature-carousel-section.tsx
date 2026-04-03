@@ -11,14 +11,14 @@ export function FeatureCarouselSection() {
     () => [
       {
         id: "slide-1",
-        image: "/land-shipping-4.png",
+        image: "/land-shipping-7.png",
         title: t("carousel.slide1Title"),
         description: t("carousel.slide1Desc"),
         href: "/#solutions",
       },
       {
         id: "slide-2",
-        image: "/land-shipping-5.png",
+        image: "/land-shipping-8.png",
         title: t("carousel.slide2Title"),
         description: t("carousel.slide2Desc"),
         href: "/register",
