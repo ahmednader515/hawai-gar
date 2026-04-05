@@ -11,7 +11,7 @@ import { SarPriceDisplay } from "@/components/sar-price-display";
 import { ShipmentPriceChangeAlert } from "@/components/shipment-price-change-alert";
 import Link from "next/link";
 import type { PickedLocation } from "@/components/mapbox-location-picker";
-import { signOut } from "next-auth/react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import { CopyableRequestId } from "@/components/copyable-request-id";
 
 /** Mapbox + geocoder are large; load only when the shipper panel or track map is shown */
@@ -53,6 +53,77 @@ const MAIN_NAV_LINK_DEFS: { href: string; labelKey: string; className?: string }
   { href: "/#advisories", labelKey: "nav.public.advisories" },
 ];
 
+type ShipmentPayload = {
+  from: string;
+  to: string;
+  fromLat: number | null;
+  fromLng: number | null;
+  toLat: number | null;
+  toLng: number | null;
+  shipmentType: string;
+  containerSize: string;
+  containersCount: string;
+  pickupDate: string;
+  notes: string | null;
+  phone: string;
+};
+
+type MyShipmentRequestItem = {
+  id: string;
+  fromText: string;
+  toText: string;
+  status: string;
+  createdAt: string;
+};
+
+type TruckOption = {
+  value: string;
+  ar: string;
+  en: string;
+};
+
+const TRUCK_SIZE_OPTIONS: TruckOption[] = [
+  { value: "تريلا", ar: "تريلا", en: "Trailer" },
+  { value: "سقس", ar: "سقس", en: "Saqs" },
+  { value: "لوري 7 متر", ar: "لوري 7 متر", en: "7m Lorry" },
+  { value: "لوري", ar: "لوري", en: "Lorry" },
+  { value: "دينا", ar: "دينا", en: "Dyna" },
+  { value: "ونيت", ar: "ونيت", en: "Pickup" },
+];
+
+const TRUCK_TYPE_OPTIONS_BY_SIZE: Record<string, TruckOption[]> = {
+  تريلا: [
+    { value: "جوانب الماني", ar: "جوانب الماني", en: "German sides" },
+    { value: "ستارة", ar: "ستارة", en: "Curtain side" },
+    { value: "ثلاجة مبرد", ar: "ثلاجة مبرد", en: "Refrigerated" },
+    { value: "سطحة", ar: "سطحة", en: "Flatbed" },
+    { value: "جوانب عالية", ar: "جوانب عالية", en: "High sides" },
+    { value: "تجميد", ar: "تجميد", en: "Freezer" },
+    { value: "سطحة ثلاث", ar: "سطحة ثلاث", en: "Triple-axle flatbed" },
+  ],
+  سقس: [
+    { value: "جوانب", ar: "جوانب", en: "Sides" },
+    { value: "ثلاجة مبرد", ar: "ثلاجة مبرد", en: "Refrigerated" },
+  ],
+  "لوري 7 متر": [{ value: "جوانب", ar: "جوانب", en: "Sides" }],
+  لوري: [
+    { value: "جوانب", ar: "جوانب", en: "Sides" },
+    { value: "صندوق مغلق", ar: "صندوق مغلق", en: "Closed box" },
+    { value: "ثلاجة مبرد", ar: "ثلاجة مبرد", en: "Refrigerated" },
+    { value: "كرين 5 طن", ar: "كرين 5 طن", en: "Crane 5t" },
+    { value: "كرين 7 طن", ar: "كرين 7 طن", en: "Crane 7t" },
+    { value: "ثلاجة مجمد", ar: "ثلاجة مجمد", en: "Freezer truck" },
+  ],
+  دينا: [
+    { value: "صندوق مغلق", ar: "صندوق مغلق", en: "Closed box" },
+    { value: "كرين", ar: "كرين", en: "Crane" },
+    { value: "ثلاجة مبرد", ar: "ثلاجة مبرد", en: "Refrigerated" },
+    { value: "جوانب", ar: "جوانب", en: "Sides" },
+    { value: "ثلاجة مجمد", ar: "ثلاجة مجمد", en: "Freezer truck" },
+  ],
+  ونيت: [{ value: "ونيت", ar: "ونيت", en: "Pickup" }],
+};
+
 export function HeroSection({
   isLoggedIn = false,
   userRole = null,
@@ -65,6 +136,10 @@ export function HeroSection({
   contactPhone?: string | null;
 }) {
   const { t, locale } = useI18n();
+  const { data: session } = useSession();
+  const liveRole = (session?.user as { role?: string } | undefined)?.role ?? null;
+  const effectiveUserRole = liveRole ?? userRole;
+  const effectiveIsLoggedIn = !!session?.user || isLoggedIn;
   const mainNavLinks = useMemo(
     () =>
       MAIN_NAV_LINK_DEFS.map((item) => ({
@@ -74,15 +149,16 @@ export function HeroSection({
       })),
     [t],
   );
-  /** Company users: shipment panel open by default on the homepage */
-  const [mode, setMode] = useState<"shipper" | null>(() =>
-    isLoggedIn && userRole === "COMPANY" ? "shipper" : null,
-  );
+  const isArabic = locale === "ar";
+  const optionLabel = (option: TruckOption) => (isArabic ? option.ar : option.en);
+
+  /** Shipment panel is always available on homepage. */
+  const [mode, setMode] = useState<"shipper" | null>("shipper");
   const [fromLoc, setFromLoc] = useState<PickedLocation | null>(null);
   const [toLoc, setToLoc] = useState<PickedLocation | null>(null);
   const [shipmentType, setShipmentType] = useState("");
-  const [containerSize, setContainerSize] = useState<"20" | "40" | "">("");
-  const [containersCount, setContainersCount] = useState("");
+  const [truckSize, setTruckSize] = useState("");
+  const [truckType, setTruckType] = useState("");
   const [pickupDate, setPickupDate] = useState("");
   const [notes, setNotes] = useState("");
   const [shipperPhone, setShipperPhone] = useState("");
@@ -95,18 +171,22 @@ export function HeroSection({
   const [trackingId, setTrackingId] = useState("");
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [trackingResult, setTrackingResult] = useState<any>(null);
+  const [myRequestsLoading, setMyRequestsLoading] = useState(false);
+  const [myRequestsError, setMyRequestsError] = useState<string | null>(null);
+  const [myRequests, setMyRequests] = useState<MyShipmentRequestItem[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pendingShipmentPayload, setPendingShipmentPayload] = useState<ShipmentPayload | null>(null);
+  const [guestModalOpen, setGuestModalOpen] = useState(false);
+  const [guestEmail, setGuestEmail] = useState("");
+  const [guestPassword, setGuestPassword] = useState("");
+  const [guestCompanyName, setGuestCompanyName] = useState("");
+  const [guestContactPerson, setGuestContactPerson] = useState("");
+  const [guestPhone, setGuestPhone] = useState("");
+  const [guestSubmitLoading, setGuestSubmitLoading] = useState(false);
+  const [guestSubmitError, setGuestSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isLoggedIn && userRole === "COMPANY") {
-      setMode("shipper");
-    } else if (!isLoggedIn || userRole !== "COMPANY") {
-      setMode(null);
-    }
-  }, [isLoggedIn, userRole]);
-
-  useEffect(() => {
-    if (!isLoggedIn) return;
+    if (!effectiveIsLoggedIn) return;
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("openShipment") === "1") {
@@ -116,7 +196,7 @@ export function HeroSection({
       const next = window.location.pathname + (params.toString() ? `?${params.toString()}` : "") + window.location.hash;
       window.history.replaceState({}, "", next);
     }
-  }, [isLoggedIn]);
+  }, [effectiveIsLoggedIn]);
 
   useEffect(() => {
     if (mode !== "shipper") return;
@@ -127,8 +207,43 @@ export function HeroSection({
     setTrackingLoading(false);
   }, [mode]);
 
-  const canShip = isLoggedIn && userRole === "COMPANY";
+  const canShip = effectiveIsLoggedIn && effectiveUserRole === "COMPANY";
   const canSaveLocation = !!fromLoc && !!toLoc;
+  const truckTypeOptions = useMemo(() => TRUCK_TYPE_OPTIONS_BY_SIZE[truckSize] ?? [], [truckSize]);
+
+  useEffect(() => {
+    if (!canShip || shipperTab !== "track") return;
+    let cancelled = false;
+    const loadMyRequests = async () => {
+      setMyRequestsLoading(true);
+      setMyRequestsError(null);
+      try {
+        const res = await fetch("/api/shipment-requests");
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          if (!cancelled) {
+            setMyRequestsError(typeof data?.error === "string" ? data.error : t("hero.errors.trackFailed"));
+            setMyRequests([]);
+          }
+          return;
+        }
+        if (!cancelled) {
+          setMyRequests(Array.isArray(data?.items) ? (data.items as MyShipmentRequestItem[]) : []);
+        }
+      } catch {
+        if (!cancelled) {
+          setMyRequestsError(t("hero.errors.trackError"));
+          setMyRequests([]);
+        }
+      } finally {
+        if (!cancelled) setMyRequestsLoading(false);
+      }
+    };
+    void loadMyRequests();
+    return () => {
+      cancelled = true;
+    };
+  }, [canShip, shipperTab, t]);
 
   const distanceKm = useMemo(() => {
     if (!fromLoc || !toLoc) return null;
@@ -191,6 +306,45 @@ export function HeroSection({
     }
   };
 
+  const clearShipmentForm = () => {
+    setFromLoc(null);
+    setToLoc(null);
+    setShipmentType("");
+    setTruckSize("");
+    setTruckType("");
+    setPickupDate("");
+    setNotes("");
+    setShipperPhone("");
+    setLocationLocked(false);
+  };
+
+  const sendShipmentRequest = async (payload: ShipmentPayload) => {
+    setSubmitLoading(true);
+    try {
+      const res = await fetch("/api/shipment-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSubmitResult({ ok: false, error: data.error ?? t("hero.errors.submitFailed") });
+        return;
+      }
+      const createdId = String(data.id);
+      setSubmitResult({ ok: true, id: createdId });
+      clearShipmentForm();
+
+      setTrackingId(createdId);
+      setShipperTab("track");
+      trackShipmentRequest(createdId);
+    } catch {
+      setSubmitResult({ ok: false, error: t("hero.errors.submitError") });
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
   const submitShipmentRequest = async () => {
     setSubmitResult(null);
     const from = fromLoc?.address?.trim() ?? "";
@@ -203,11 +357,11 @@ export function HeroSection({
       setSubmitResult({ ok: false, error: t("hero.errors.shipmentType") });
       return;
     }
-    if (!containerSize) {
+    if (!truckSize) {
       setSubmitResult({ ok: false, error: t("hero.errors.containerSize") });
       return;
     }
-    if (!containersCount.trim()) {
+    if (!truckType.trim()) {
       setSubmitResult({ ok: false, error: t("hero.errors.containersCount") });
       return;
     }
@@ -223,51 +377,87 @@ export function HeroSection({
       setSubmitResult({ ok: false, error: t("hero.errors.priceDistance") });
       return;
     }
-    setSubmitLoading(true);
+    const payload: ShipmentPayload = {
+      from,
+      to,
+      fromLat: fromLoc?.lat ?? null,
+      fromLng: fromLoc?.lng ?? null,
+      toLat: toLoc?.lat ?? null,
+      toLng: toLoc?.lng ?? null,
+      shipmentType,
+      containerSize: truckSize,
+      containersCount: truckType.trim(),
+      pickupDate,
+      notes: notes.trim() || null,
+      phone: shipperPhone.trim(),
+    };
+
+    if (!canShip) {
+      setPendingShipmentPayload(payload);
+      setGuestPhone(shipperPhone.trim());
+      setGuestModalOpen(true);
+      return;
+    }
+
+    await sendShipmentRequest(payload);
+  };
+
+  const createGuestAccountAndSubmit = async () => {
+    const email = guestEmail.trim();
+    const password = guestPassword.trim();
+    const companyName = guestCompanyName.trim();
+    const contactPerson = guestContactPerson.trim();
+    const phone = guestPhone.trim();
+
+    if (!pendingShipmentPayload) return;
+    if (!email || !password || !companyName || !contactPerson || !phone) {
+      setGuestSubmitError(t("registerForm.allFieldsRequired"));
+      return;
+    }
+
+    setGuestSubmitLoading(true);
+    setGuestSubmitError(null);
     try {
-      const res = await fetch("/api/shipment-requests", {
+      const registerRes = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          from,
-          to,
-          fromLat: fromLoc?.lat ?? null,
-          fromLng: fromLoc?.lng ?? null,
-          toLat: toLoc?.lat ?? null,
-          toLng: toLoc?.lng ?? null,
-          shipmentType,
-          containerSize: containerSize || null,
-          containersCount: containersCount.trim(),
-          pickupDate,
-          notes: notes.trim() || null,
-          phone: shipperPhone.trim(),
+          email,
+          password,
+          role: "COMPANY",
+          companyName,
+          contactPerson,
+          phone,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setSubmitResult({ ok: false, error: data.error ?? t("hero.errors.submitFailed") });
+      const registerData = await registerRes.json().catch(() => ({}));
+      if (!registerRes.ok) {
+        setGuestSubmitError(
+          typeof registerData?.error === "string" ? registerData.error : t("registerForm.errorGeneric"),
+        );
         return;
       }
-      const createdId = String(data.id);
-      setSubmitResult({ ok: true, id: createdId });
-      setFromLoc(null);
-      setToLoc(null);
-      setShipmentType("");
-      setContainerSize("");
-      setContainersCount("");
-      setPickupDate("");
-      setNotes("");
-      setShipperPhone("");
-      setLocationLocked(false);
 
-      // Move to tracking tab and prefill id
-      setTrackingId(createdId);
-      setShipperTab("track");
-      trackShipmentRequest(createdId);
+      const signInRes = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+      if (signInRes?.error) {
+        setGuestSubmitError(t("registerForm.errorSignInAfter"));
+        return;
+      }
+
+      setGuestModalOpen(false);
+      setPendingShipmentPayload(null);
+      await sendShipmentRequest({
+        ...pendingShipmentPayload,
+        phone,
+      });
     } catch {
-      setSubmitResult({ ok: false, error: t("hero.errors.submitError") });
+      setGuestSubmitError(t("registerForm.errorTryAgain"));
     } finally {
-      setSubmitLoading(false);
+      setGuestSubmitLoading(false);
     }
   };
 
@@ -336,7 +526,7 @@ export function HeroSection({
               {item.label}
             </Link>
           ))}
-          {isLoggedIn && userRole !== "COMPANY" && (
+          {effectiveIsLoggedIn && effectiveUserRole !== "COMPANY" && (
             <Link
               href="/dashboard"
               className="py-3 px-3 rounded-lg font-medium text-foreground bg-primary/15 text-primary hover:bg-primary/25 active:bg-primary/25 transition-colors min-h-[44px] flex items-center mt-2 border-t border-border pt-4"
@@ -345,7 +535,7 @@ export function HeroSection({
               {t("common.dashboard")}
             </Link>
           )}
-          {isLoggedIn && (
+          {effectiveIsLoggedIn && (
             <div className="border-t border-border mt-2 pt-4">
               <button
                 type="button"
@@ -409,9 +599,9 @@ export function HeroSection({
             <LanguageSwitcher variant="hero" className="shrink-0" />
             <div className="h-5 sm:h-6 w-px bg-white/40 shrink-0 hidden sm:block" aria-hidden />
             <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-              {isLoggedIn ? (
+              {effectiveIsLoggedIn ? (
                 <>
-                  {userRole !== "COMPANY" ? (
+                  {effectiveUserRole !== "COMPANY" ? (
                     <Link
                       href="/dashboard"
                       className="px-2.5 py-1.5 rounded-md text-xs font-medium sm:px-3 sm:py-1.5 sm:rounded-lg sm:text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap"
@@ -480,30 +670,21 @@ export function HeroSection({
             <p className="text-white/90 text-sm sm:text-base leading-relaxed mb-5">
               {t("hero.shipperBody")}
             </p>
-            {isLoggedIn && userRole === "COMPANY" ? (
-              <button
-                type="button"
-                onClick={() => setMode("shipper")}
-                className={`inline-flex items-center justify-center w-full h-12 rounded-xl font-semibold transition-colors ${
-                  mode === "shipper"
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                    : "bg-white text-foreground hover:bg-white/90"
-                }`}
-              >
-                {t("hero.shipperCtaTabs")}
-              </button>
-            ) : !isLoggedIn ? (
-              <Link
-                href="/register/company"
-                className="inline-flex items-center justify-center w-full h-12 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors"
-              >
-                {t("hero.shipperRegister")}
-              </Link>
-            ) : null}
+            <button
+              type="button"
+              onClick={() => setMode("shipper")}
+              className={`inline-flex items-center justify-center w-full h-12 rounded-xl font-semibold transition-colors ${
+                mode === "shipper"
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  : "bg-white text-foreground hover:bg-white/90"
+              }`}
+            >
+              {t("hero.shipperCtaTabs")}
+            </button>
           </div>
 
           {/* Left side: carriers */}
-          <div className="md:order-2 rounded-2xl border border-white/20 bg-black/35 backdrop-blur-sm p-5 sm:p-6 text-white shadow-xl">
+          <div className="hidden md:block md:order-2 rounded-2xl border border-white/20 bg-black/35 backdrop-blur-sm p-5 sm:p-6 text-white shadow-xl">
             <h2 className="text-xl sm:text-2xl font-bold mb-2">{t("hero.carrierTitle")}</h2>
             <p className="text-white/90 text-sm sm:text-base leading-relaxed mb-5">
               {t("hero.carrierBody")}
@@ -517,7 +698,7 @@ export function HeroSection({
           </div>
         </div>
 
-        {mode === "shipper" && canShip && (
+        {mode === "shipper" && (
           <div className="w-full max-w-2xl mt-6 sm:mt-8 bg-white rounded-2xl shadow-2xl p-4 sm:p-6 md:p-8 border border-gray-100 mx-2 sm:mx-0">
             <div className="flex items-start justify-between gap-4 mb-4">
               <div className="min-w-0">
@@ -672,26 +853,38 @@ export function HeroSection({
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground">{t("hero.containerSize")}</label>
                 <select
-                  value={containerSize}
-                  onChange={(e) => setContainerSize(e.target.value as "20" | "40" | "")}
+                  value={truckSize}
+                  onChange={(e) => {
+                    setTruckSize(e.target.value);
+                    setTruckType("");
+                  }}
                   required
                   className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 >
                   <option value="">{t("hero.containerPlaceholder")}</option>
-                  <option value="20">{t("hero.container20")}</option>
-                  <option value="40">{t("hero.container40")}</option>
+                  {TRUCK_SIZE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {optionLabel(option)}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground">{t("hero.containersCount")}</label>
-                <input
-                  value={containersCount}
-                  onChange={(e) => setContainersCount(e.target.value)}
-                  placeholder={t("hero.containersPlaceholder")}
-                  inputMode="numeric"
+                <select
+                  value={truckType}
+                  onChange={(e) => setTruckType(e.target.value)}
                   required
+                  disabled={!truckSize}
                   className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                />
+                >
+                  <option value="">{t("hero.containersPlaceholder")}</option>
+                  {truckTypeOptions.map((option) => (
+                    <option key={`${truckSize}-${option.value}`} value={option.value}>
+                      {optionLabel(option)}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="space-y-1.5 sm:col-span-2">
                 <label className="text-sm font-medium text-foreground">{t("hero.pickupDate")}</label>
@@ -726,9 +919,54 @@ export function HeroSection({
               </div>
             ) : (
               <div className="space-y-3">
+                {canShip ? (
+                  <div className="rounded-lg border border-border bg-muted/20 p-3">
+                    <div className="mb-2 text-sm font-semibold text-foreground">{t("dashboard.client.incomingTitle")}</div>
+                    {myRequestsLoading ? (
+                      <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+                    ) : myRequestsError ? (
+                      <p className="text-sm text-red-700">{myRequestsError}</p>
+                    ) : myRequests.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">{t("dashboard.client.noRequestsAtAll")}</p>
+                    ) : (
+                      <div className="max-h-56 space-y-2 overflow-auto pr-1">
+                        {myRequests.map((item) => {
+                          const statusKey = `shipmentRequestStatus.${item.status}`;
+                          const statusLabel = t(statusKey);
+                          return (
+                            <button
+                              type="button"
+                              key={item.id}
+                              onClick={() => {
+                                setTrackingId(item.id);
+                                void trackShipmentRequest(item.id);
+                              }}
+                              className="block w-full rounded-lg border border-border bg-background p-3 text-start hover:bg-muted/40 transition-colors"
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-sm font-semibold text-foreground">{item.id}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(item.createdAt).toLocaleDateString(
+                                    locale === "ar" ? AR_LOCALE_LATN : "en-GB",
+                                  )}
+                                </span>
+                              </div>
+                              <div className="mt-1 text-sm text-muted-foreground">
+                                {item.fromText} → {item.toText}
+                              </div>
+                              <div className="mt-1 text-xs font-medium text-foreground">
+                                {statusLabel !== statusKey ? statusLabel : item.status}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
                 <div className="space-y-1.5">
                   <label className="text-base font-semibold text-foreground">{t("hero.requestIdLabel")}</label>
-                  {userRole === "COMPANY" ? (
+                  {effectiveUserRole === "COMPANY" ? (
                     <p className="text-xs text-muted-foreground leading-snug">{t("hero.trackSaveIdHint")}</p>
                   ) : null}
                   <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch">
@@ -813,7 +1051,7 @@ export function HeroSection({
                               />
                             </div>
                           )}
-                        {userRole === "COMPANY" &&
+                        {effectiveUserRole === "COMPANY" &&
                           typeof (trackingResult.data as { invoiceLink?: string | null }).invoiceLink ===
                             "string" &&
                           String((trackingResult.data as { invoiceLink?: string | null }).invoiceLink).trim() !==
@@ -837,7 +1075,7 @@ export function HeroSection({
                             {t("hero.paymentProofPendingAdmin")}
                           </p>
                         )}
-                        {userRole === "COMPANY" &&
+                        {effectiveUserRole === "COMPANY" &&
                           trackingResult.data?.id != null &&
                           ["ADMIN_APPROVED", "AWAITING_PAYMENT_APPROVAL"].includes(
                             String(trackingResult.data.status),
@@ -954,7 +1192,106 @@ export function HeroSection({
             </div>
           </div>
         )}
+
+        <div className="md:hidden w-full max-w-2xl mt-4 px-2 sm:px-0">
+          <div className="rounded-2xl border border-white/20 bg-black/35 backdrop-blur-sm p-5 sm:p-6 text-white shadow-xl">
+            <h2 className="text-xl sm:text-2xl font-bold mb-2">{t("hero.carrierTitle")}</h2>
+            <p className="text-white/90 text-sm sm:text-base leading-relaxed mb-5">
+              {t("hero.carrierBody")}
+            </p>
+            <Link
+              href="/register/carrier"
+              className="inline-flex items-center justify-center w-full h-12 rounded-xl bg-white text-foreground font-semibold hover:bg-white/90 transition-colors"
+            >
+              {t("hero.carrierRegister")}
+            </Link>
+          </div>
+        </div>
       </div>
+
+      {guestModalOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/55 px-4">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-background p-5 shadow-2xl sm:p-6">
+            <h4 className="text-lg font-bold text-foreground">{t("hero.guestAccount.title")}</h4>
+            <p className="mt-1 text-sm text-muted-foreground">{t("hero.guestAccount.body")}</p>
+
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="text-sm font-medium text-foreground">{t("registerForm.email")}</label>
+                <input
+                  type="email"
+                  value={guestEmail}
+                  onChange={(e) => setGuestEmail(e.target.value)}
+                  placeholder={t("registerForm.placeholders.email")}
+                  className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="text-sm font-medium text-foreground">{t("registerForm.password")}</label>
+                <input
+                  type="password"
+                  value={guestPassword}
+                  onChange={(e) => setGuestPassword(e.target.value)}
+                  className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">{t("registerForm.companyName")}</label>
+                <input
+                  value={guestCompanyName}
+                  onChange={(e) => setGuestCompanyName(e.target.value)}
+                  placeholder={t("registerForm.placeholders.companyName")}
+                  className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">{t("registerForm.contactPerson")}</label>
+                <input
+                  value={guestContactPerson}
+                  onChange={(e) => setGuestContactPerson(e.target.value)}
+                  placeholder={t("registerForm.placeholders.contactPerson")}
+                  className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="text-sm font-medium text-foreground">{t("registerForm.phone")}</label>
+                <input
+                  value={guestPhone}
+                  onChange={(e) => setGuestPhone(e.target.value)}
+                  placeholder={t("registerForm.placeholders.phone")}
+                  className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                />
+              </div>
+            </div>
+
+            {guestSubmitError ? (
+              <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{guestSubmitError}</p>
+            ) : null}
+
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setGuestModalOpen(false);
+                  setGuestSubmitError(null);
+                  setPendingShipmentPayload(null);
+                }}
+                className="inline-flex items-center justify-center h-11 px-5 rounded-xl border border-border text-foreground hover:bg-muted transition-colors"
+              >
+                {t("common.close")}
+              </button>
+              <button
+                type="button"
+                onClick={createGuestAccountAndSubmit}
+                disabled={guestSubmitLoading}
+                className="inline-flex items-center justify-center h-11 px-5 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 disabled:opacity-70 disabled:cursor-not-allowed transition-colors"
+              >
+                {guestSubmitLoading ? t("hero.guestAccount.creating") : t("hero.guestAccount.submit")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Gold divider */}
       <div className="relative z-10 h-2 bg-primary" />

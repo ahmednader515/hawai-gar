@@ -52,10 +52,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "نوع الشحنة مطلوب" }, { status: 400 });
     }
     if (!containerSize) {
-      return NextResponse.json({ error: "حجم الحاوية مطلوب" }, { status: 400 });
+      return NextResponse.json({ error: "حجم الشاحنة مطلوب" }, { status: 400 });
     }
     if (!containersCount) {
-      return NextResponse.json({ error: "عدد الحاويات مطلوب" }, { status: 400 });
+      return NextResponse.json({ error: "نوع الشاحنة مطلوب" }, { status: 400 });
     }
     if (!pickupDate) {
       return NextResponse.json({ error: "تاريخ الاستلام مطلوب" }, { status: 400 });
@@ -104,6 +104,35 @@ export async function POST(req: Request) {
       { error: "تعذر إنشاء طلب الشحن" },
       { status: 500 }
     );
+  }
+}
+
+export async function GET() {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "يجب تسجيل الدخول أولاً" }, { status: 401 });
+    }
+    if ((session.user as { role?: string }).role !== "COMPANY") {
+      return NextResponse.json({ error: "غير مصرح" }, { status: 403 });
+    }
+
+    const requests = await prisma.shipmentRequest.findMany({
+      where: { companyId: session.user.id },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        fromText: true,
+        toText: true,
+        status: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json({ ok: true, items: requests });
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ error: "تعذر جلب طلبات الشحن" }, { status: 500 });
   }
 }
 

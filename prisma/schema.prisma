@@ -212,3 +212,25 @@ model ShipmentRequest {
   @@index([carrierId])
   @@index([companyId])
 }
+
+model ShipmentCompany {
+  id                 String   @id @default(cuid())
+  sourcePdf          String
+  sourceIndex        Int
+  sourceRowNumber    Int?
+  companyName        String?
+  representativeName String?
+  email              String?
+  phone              String?
+  truckTypes         String?
+  destinations       String?
+  rawText            String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([sourcePdf, sourceIndex])
+  @@index([companyName])
+  @@index([email])
+  @@index([phone])
+  @@map("shipment_companies")
+}
