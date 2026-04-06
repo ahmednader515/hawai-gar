@@ -71,6 +71,14 @@ export default async function ClientShipmentRequestDetailPage({
       containersCount: true,
       pickupDate: true,
       notes: true,
+        shipmentCompany: {
+          select: {
+            company_name: true,
+            representative_name: true,
+            phone: true,
+            email: true,
+          },
+        },
     },
   });
 
@@ -190,6 +198,36 @@ export default async function ClientShipmentRequestDetailPage({
                 </div>
               </dl>
             </section>
+
+            {r.shipmentCompany && (
+              <section
+                className="rounded-xl border border-border/60 bg-muted/25 p-4"
+                aria-labelledby="assigned-carrier-heading"
+              >
+                <h2
+                  id="assigned-carrier-heading"
+                  className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                >
+                  {t("dashboard.admin.carrier")}
+                </h2>
+                <p className="mt-2 text-sm font-semibold text-foreground">
+                  {r.shipmentCompany.company_name ?? "—"}
+                </p>
+                {r.shipmentCompany.representative_name ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {r.shipmentCompany.representative_name}
+                  </p>
+                ) : null}
+                {r.shipmentCompany.phone ? (
+                  <p className="mt-1 text-xs text-muted-foreground">{r.shipmentCompany.phone}</p>
+                ) : null}
+                {r.shipmentCompany.email ? (
+                  <p className="mt-1 text-xs text-muted-foreground break-all">
+                    {r.shipmentCompany.email}
+                  </p>
+                ) : null}
+              </section>
+            )}
 
             <section
               className="rounded-2xl border border-primary/20 bg-primary/[0.06] p-5 dark:bg-primary/10"

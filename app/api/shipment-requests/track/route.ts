@@ -48,6 +48,15 @@ export async function GET(req: Request) {
         adminDecisionAt: true,
         invoiceLink: true,
         invoiceImageUrl: true,
+        shipmentCompany: {
+          select: {
+            id: true,
+            company_name: true,
+            representative_name: true,
+            phone: true,
+            email: true,
+          },
+        },
       },
     });
 
@@ -82,6 +91,7 @@ export async function GET(req: Request) {
       adminDecisionAt: r.adminDecisionAt,
       invoiceLink: r.invoiceLink,
       invoiceImageUrl: r.invoiceImageUrl,
+      shipmentCompany: r.shipmentCompany,
     });
   } catch (e) {
     console.error(e);

@@ -198,6 +198,7 @@ model ShipmentRequest {
   phone           String?
   status          String   @default("PENDING_CARRIER")
   carrierId       String?
+  shipmentCompanyId String?
   carrierDecisionAt DateTime?
   adminId         String?
   adminDecisionAt DateTime?
@@ -207,29 +208,28 @@ model ShipmentRequest {
   invoiceImageUrl String?
   createdAt       DateTime @default(now())
 
+  shipmentCompany ShipmentCompany? @relation(fields: [shipmentCompanyId], references: [id], onDelete: SetNull)
+
   @@index([createdAt])
   @@index([status])
   @@index([carrierId])
+  @@index([shipmentCompanyId])
   @@index([companyId])
 }
 
 model ShipmentCompany {
-  id                 String   @id @default(cuid())
-  sourcePdf          String
-  sourceIndex        Int
-  sourceRowNumber    Int?
-  companyName        String?
-  representativeName String?
-  email              String?
-  phone              String?
-  truckTypes         String?
-  destinations       String?
-  rawText            String
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  company_name        String?
+  representative_name String?
+  email               String?
+  phone               String?
+  truck_types         String?
+  destinations        String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  requests            ShipmentRequest[]
 
-  @@unique([sourcePdf, sourceIndex])
-  @@index([companyName])
+  @@index([company_name])
   @@index([email])
   @@index([phone])
   @@map("shipment_companies")

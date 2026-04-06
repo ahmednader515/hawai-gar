@@ -1,0 +1,56 @@
+generatedAt: 2026-04-05T20:22:03.189Z
+sourcePdf: الشركات.pdf
+totalPages: 175
+textPages: 175
+ocrPages: 0
+noDataPages: 0
+totalRows: 5146
+rowsWithoutCompanyName: 1979
+rowsWithoutEmail: 2194
+rowsWithoutPhone: 2170
+duplicateEmails: 212
+duplicatePhones: 212
+
+Top duplicate emails:
+- amro@salembalhamer.com (7)
+- trd@abn.sa.com (6)
+- abdualrzzaq@al-fares.com (5)
+- faifim@seder.sa (4)
+- zaljabri@abclogistic.com (4)
+- info@alshurei.com (4)
+- alyahmdy002@gmail.com (4)
+- kreem@sfc.com.sa (3)
+- alrsd.sa@gmail.com (3)
+- salim@fourwinds-ksa.com (3)
+- meshari.almutairi_@hotmail.com (3)
+- info@ktar.sa (3)
+- fares@wejhattrans.com (3)
+- hr@fsc.com.sa (3)
+- h.alothman.est@outlook.sa (3)
+- bawasel.m@gmail.com (3)
+- vip.mmm.205@gmail.com (3)
+- al.lebad.est@gmail.com (3)
+- ramaalalsahra@gmail.com (3)
+- turkyalrwaily71@gmail.com (3)
+
+Top duplicate phones:
+- +966593851115 (7)
+- +966561791923 (5)
+- +966550008555 (4)
+- +966508088886 (4)
+- +966505118325 (4)
+- +966555137757 (4)
+- +966569000308 (4)
+- +966554191337 (3)
+- +966546048888 (3)
+- +966531800883 (3)
+- +966505462144 (3)
+- +966555230014 (3)
+- +966597747779 (3)
+- +966560836666 (3)
+- +966506100194 (3)
+- +966570660570 (3)
+- +966593099050 (3)
+- +966504454530 (3)
+- +966538400087 (3)
+- +966541902020 (3)

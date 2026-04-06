@@ -663,41 +663,6 @@ export function HeroSection({
           </div>
         </div>
 
-        <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 px-2 sm:px-0">
-          {/* Right side: shippers */}
-          <div className="md:order-1 rounded-2xl border border-white/20 bg-black/35 backdrop-blur-sm p-5 sm:p-6 text-white shadow-xl">
-            <h2 className="text-xl sm:text-2xl font-bold mb-2">{t("hero.shipperTitle")}</h2>
-            <p className="text-white/90 text-sm sm:text-base leading-relaxed mb-5">
-              {t("hero.shipperBody")}
-            </p>
-            <button
-              type="button"
-              onClick={() => setMode("shipper")}
-              className={`inline-flex items-center justify-center w-full h-12 rounded-xl font-semibold transition-colors ${
-                mode === "shipper"
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                  : "bg-white text-foreground hover:bg-white/90"
-              }`}
-            >
-              {t("hero.shipperCtaTabs")}
-            </button>
-          </div>
-
-          {/* Left side: carriers */}
-          <div className="hidden md:block md:order-2 rounded-2xl border border-white/20 bg-black/35 backdrop-blur-sm p-5 sm:p-6 text-white shadow-xl">
-            <h2 className="text-xl sm:text-2xl font-bold mb-2">{t("hero.carrierTitle")}</h2>
-            <p className="text-white/90 text-sm sm:text-base leading-relaxed mb-5">
-              {t("hero.carrierBody")}
-            </p>
-            <Link
-              href="/register/carrier"
-              className="inline-flex items-center justify-center w-full h-12 rounded-xl bg-white text-foreground font-semibold hover:bg-white/90 transition-colors"
-            >
-              {t("hero.carrierRegister")}
-            </Link>
-          </div>
-        </div>
-
         {mode === "shipper" && (
           <div className="w-full max-w-2xl mt-6 sm:mt-8 bg-white rounded-2xl shadow-2xl p-4 sm:p-6 md:p-8 border border-gray-100 mx-2 sm:mx-0">
             <div className="flex items-start justify-between gap-4 mb-4">
@@ -1193,7 +1158,7 @@ export function HeroSection({
           </div>
         )}
 
-        <div className="md:hidden w-full max-w-2xl mt-4 px-2 sm:px-0">
+        <div className="w-full max-w-2xl mt-4 px-2 sm:px-0">
           <div className="rounded-2xl border border-white/20 bg-black/35 backdrop-blur-sm p-5 sm:p-6 text-white shadow-xl">
             <h2 className="text-xl sm:text-2xl font-bold mb-2">{t("hero.carrierTitle")}</h2>
             <p className="text-white/90 text-sm sm:text-base leading-relaxed mb-5">

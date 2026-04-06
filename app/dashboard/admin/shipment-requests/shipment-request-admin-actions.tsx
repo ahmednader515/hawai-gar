@@ -15,6 +15,8 @@ export function ShipmentRequestAdminActions({
   estimatedPriceSar,
   invoiceLink: invoiceLinkProp,
   invoiceImageUrl,
+  assignedShipmentCompany,
+  compatibleShipmentCompanies,
 }: {
   id: string;
   status: string;
@@ -22,6 +24,25 @@ export function ShipmentRequestAdminActions({
   estimatedPriceSar: number | null;
   invoiceLink: string | null;
   invoiceImageUrl: string | null;
+  assignedShipmentCompany: {
+    id: string;
+    company_name: string | null;
+    representative_name: string | null;
+    phone: string | null;
+    email: string | null;
+    truck_types: string | null;
+    destinations: string | null;
+  } | null;
+  compatibleShipmentCompanies: Array<{
+    id: string;
+    company_name: string | null;
+    representative_name: string | null;
+    phone: string | null;
+    email: string | null;
+    truck_types: string | null;
+    destinations: string | null;
+    score: number;
+  }>;
 }) {
   const { t } = useI18n();
   const router = useRouter();
@@ -34,6 +55,10 @@ export function ShipmentRequestAdminActions({
     priceSar == null ? "" : String(Math.round(priceSar)),
   );
   const [invoiceLinkInput, setInvoiceLinkInput] = useState(() => invoiceLinkProp ?? "");
+  const [selectedShipmentCompanyId, setSelectedShipmentCompanyId] = useState<string>(
+    assignedShipmentCompany?.id ?? "",
+  );
+  const [companySearch, setCompanySearch] = useState("");
 
   const a = "dashboard.admin";
 
@@ -49,6 +74,34 @@ export function ShipmentRequestAdminActions({
   useEffect(() => {
     setInvoiceLinkInput(invoiceLinkProp ?? "");
   }, [invoiceLinkProp]);
+
+  useEffect(() => {
+    setSelectedShipmentCompanyId(assignedShipmentCompany?.id ?? "");
+  }, [assignedShipmentCompany?.id]);
+
+  async function assignShipmentCompany() {
+    if (!selectedShipmentCompanyId) {
+      setError(t(`${a}.shipmentActionsAssignRequired`));
+      return;
+    }
+    setLoading("approve");
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/shipment-requests/${id}/assign-company`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shipmentCompanyId: selectedShipmentCompanyId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError((data.error as string) ?? t(`${a}.shipmentActionsErrorGeneric`));
+        return;
+      }
+      router.refresh();
+    } finally {
+      setLoading(null);
+    }
+  }
 
   async function saveInvoiceLink(clear: boolean) {
     setLoading("invoice");
@@ -129,6 +182,22 @@ export function ShipmentRequestAdminActions({
 
   const actionBusy = loading === "approve" || loading === "reject";
   const paymentReviewBusy = loading === "paymentApprove" || loading === "paymentReject";
+  const q = companySearch.trim().toLowerCase();
+  const filteredShipmentCompanies = compatibleShipmentCompanies.filter((company) => {
+    if (!q) return true;
+    const hay = [
+      company.company_name,
+      company.representative_name,
+      company.phone,
+      company.email,
+      company.truck_types,
+      company.destinations,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return hay.includes(q);
+  });
 
   return (
     <div className="pt-2 space-y-4">
@@ -137,7 +206,100 @@ export function ShipmentRequestAdminActions({
       )}
 
       {isPendingCarrier && (
-        <p className="text-xs text-muted-foreground">{t(`${a}.shipmentActionsPendingCarrier`)}</p>
+        <div className="space-y-3 rounded-xl border border-border bg-muted/20 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-medium">{t(`${a}.shipmentActionsAssignTitle`)}</p>
+            <p className="rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground">
+              {t(`${a}.shipmentActionsCompaniesCount`).replace(
+                "{count}",
+                String(filteredShipmentCompanies.length),
+              )}
+            </p>
+          </div>
+          {compatibleShipmentCompanies.length === 0 ? (
+            <p className="text-xs text-muted-foreground">{t(`${a}.shipmentActionsNoCompatible`)}</p>
+          ) : (
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="shipment-company-search">{t(`${a}.shipmentActionsAssignLabel`)}</Label>
+                <Input
+                  id="shipment-company-search"
+                  value={companySearch}
+                  onChange={(e) => setCompanySearch(e.target.value)}
+                  placeholder={t(`${a}.shipmentActionsSearchPlaceholder`)}
+                  disabled={loading === "approve"}
+                />
+              </div>
+
+              <div className="max-h-80 space-y-2 overflow-y-auto rounded-lg border border-border bg-background/80 p-2">
+                {filteredShipmentCompanies.length === 0 ? (
+                  <p className="px-2 py-3 text-xs text-muted-foreground">
+                    {t(`${a}.shipmentActionsNoSearchResults`)}
+                  </p>
+                ) : (
+                  filteredShipmentCompanies.map((company) => {
+                    const isSelected = selectedShipmentCompanyId === company.id;
+                    return (
+                      <button
+                        key={company.id}
+                        type="button"
+                        onClick={() => setSelectedShipmentCompanyId(company.id)}
+                        disabled={loading === "approve"}
+                        className={[
+                          "w-full rounded-lg border px-3 py-2 text-start transition-colors",
+                          isSelected
+                            ? "border-primary bg-primary/10 ring-1 ring-primary/30"
+                            : "border-border bg-background hover:bg-muted/40",
+                        ].join(" ")}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm font-semibold text-foreground">
+                            {company.company_name ?? t(`${a}.shipmentActionsUnknownCompany`)}
+                          </p>
+                          <span className="shrink-0 rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                            {t(`${a}.shipmentActionsScore`).replace("{score}", String(company.score))}
+                          </span>
+                        </div>
+                        {company.representative_name ? (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {company.representative_name}
+                          </p>
+                        ) : null}
+                        {(company.phone || company.email) && (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {company.phone ? <span dir="ltr">{company.phone}</span> : null}
+                            {company.phone && company.email ? " • " : null}
+                            {company.email ? <span dir="ltr">{company.email}</span> : null}
+                          </p>
+                        )}
+                        {(company.truck_types || company.destinations) && (
+                          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                            {[company.truck_types, company.destinations].filter(Boolean).join(" • ")}
+                          </p>
+                        )}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+
+              <Button
+                size="sm"
+                onClick={() => void assignShipmentCompany()}
+                disabled={loading === "approve" || !selectedShipmentCompanyId}
+              >
+                {loading === "approve"
+                  ? t(`${a}.shipmentActionsLoading`)
+                  : t(`${a}.shipmentActionsAssignButton`)}
+              </Button>
+            </>
+          )}
+          {assignedShipmentCompany && (
+            <p className="text-xs text-muted-foreground">
+              {t(`${a}.shipmentActionsAssignedCurrent`)} {assignedShipmentCompany.company_name ?? "—"}
+            </p>
+          )}
+        </div>
       )}
 
       {canCarrierDecide && (

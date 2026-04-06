@@ -12,7 +12,11 @@
     "db:setup": "prisma generate && prisma db push && prisma db seed",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
-    "db:import-shipment-companies": "tsx prisma/import-shipment-companies.ts"
+    "db:import-shipment-companies": "tsx prisma/import-shipment-companies-data.ts",
+    "db:import-shipment-companies-data": "tsx prisma/import-shipment-companies-data.ts",
+    "db:clear-shipment-companies": "tsx prisma/clear-shipment-companies.ts",
+    "db:extract-shipment-companies": "tsx prisma/import-shipment-companies.ts --mode extract-only --input public/الشركات.pdf",
+    "db:load-shipment-companies": "tsx prisma/import-shipment-companies.ts --mode load-approved --approved-json tmp/extracted-companies/shipment-companies.extracted.json"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

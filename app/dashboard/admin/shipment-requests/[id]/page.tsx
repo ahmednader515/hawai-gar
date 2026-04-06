@@ -18,6 +18,7 @@ import { getLocale, getTranslations } from "@/lib/i18n/server";
 import { cn } from "@/lib/utils";
 import { Building2, Calendar, ChevronLeft, MapPin, Package, Phone, Truck } from "lucide-react";
 import { ShipmentRequestProgressBar } from "@/components/shipment-request-progress-bar";
+import { getCompatibleShipmentCompanies } from "@/lib/shipment-company-compatibility";
 
 function statusBadgeClass(status: string): string {
   switch (status) {
@@ -86,10 +87,12 @@ export default async function AdminShipmentRequestDetailsPage({
 
       companyId: true,
       carrierId: true,
+      shipmentCompanyId: true,
 
       fromText: true,
       toText: true,
       shipmentType: true,
+      containersCount: true,
 
       fromLat: true,
       fromLng: true,
@@ -148,6 +151,49 @@ export default async function AdminShipmentRequestDetailsPage({
         })
       : Promise.resolve(null),
   ]);
+
+  const assignedShipmentCompany = r.shipmentCompanyId
+    ? await prisma.shipmentCompany.findUnique({
+        where: { id: r.shipmentCompanyId },
+        select: {
+          id: true,
+          company_name: true,
+          representative_name: true,
+          phone: true,
+          email: true,
+          truck_types: true,
+          destinations: true,
+        },
+      })
+    : null;
+
+  const shipmentCompanies = await prisma.shipmentCompany.findMany({
+    select: {
+      id: true,
+      company_name: true,
+      representative_name: true,
+      phone: true,
+      email: true,
+      truck_types: true,
+      destinations: true,
+    },
+  });
+
+  const compatibleShipmentCompanies = getCompatibleShipmentCompanies(
+    {
+      shipmentType: r.shipmentType,
+      containerSize: r.containerSize,
+      containersCount: r.containersCount,
+      fromText: r.fromText,
+      toText: r.toText,
+      fromLat: r.fromLat,
+      fromLng: r.fromLng,
+      toLat: r.toLat,
+      toLng: r.toLng,
+      notes: r.notes,
+    },
+    shipmentCompanies,
+  ).slice(0, 40);
 
   const hasCoords =
     r.fromLat != null && r.fromLng != null && r.toLat != null && r.toLng != null;
@@ -367,7 +413,35 @@ export default async function AdminShipmentRequestDetailsPage({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 pt-3 text-sm">
-                {carrierUser?.driverProfile ? (
+                {assignedShipmentCompany ? (
+                  <>
+                    <p className="font-semibold text-foreground">
+                      {assignedShipmentCompany.company_name ?? "—"}
+                    </p>
+                    {assignedShipmentCompany.representative_name && (
+                      <p className="text-muted-foreground">
+                        {t(`${da}.shipmentDetailCompanyContact`)}: {assignedShipmentCompany.representative_name}
+                      </p>
+                    )}
+                    {assignedShipmentCompany.phone && (
+                      <p className="flex items-center gap-2 text-muted-foreground">
+                        <Phone className="size-3.5 shrink-0 opacity-70" aria-hidden />
+                        {assignedShipmentCompany.phone}
+                      </p>
+                    )}
+                    {assignedShipmentCompany.email && (
+                      <p className="break-all text-muted-foreground">
+                        {t(`${da}.shipmentDetailCarrierEmail`)}: {assignedShipmentCompany.email}
+                      </p>
+                    )}
+                    {assignedShipmentCompany.truck_types && (
+                      <p className="text-muted-foreground">{assignedShipmentCompany.truck_types}</p>
+                    )}
+                    {assignedShipmentCompany.destinations && (
+                      <p className="text-muted-foreground">{assignedShipmentCompany.destinations}</p>
+                    )}
+                  </>
+                ) : carrierUser?.driverProfile ? (
                   <>
                     <p className="font-semibold text-foreground">{carrierUser.driverProfile.fullName}</p>
                     <p className="text-muted-foreground">
@@ -412,6 +486,29 @@ export default async function AdminShipmentRequestDetailsPage({
                 estimatedPriceSar={r.estimatedPriceSar ?? null}
                 invoiceLink={r.invoiceLink ?? null}
                 invoiceImageUrl={r.invoiceImageUrl ?? null}
+                assignedShipmentCompany={
+                  assignedShipmentCompany
+                    ? {
+                        id: assignedShipmentCompany.id,
+                        company_name: assignedShipmentCompany.company_name,
+                        representative_name: assignedShipmentCompany.representative_name,
+                        phone: assignedShipmentCompany.phone,
+                        email: assignedShipmentCompany.email,
+                        truck_types: assignedShipmentCompany.truck_types,
+                        destinations: assignedShipmentCompany.destinations,
+                      }
+                    : null
+                }
+                compatibleShipmentCompanies={compatibleShipmentCompanies.map((item) => ({
+                  id: item.company.id,
+                  company_name: item.company.company_name,
+                  representative_name: item.company.representative_name,
+                  phone: item.company.phone,
+                  email: item.company.email,
+                  truck_types: item.company.truck_types,
+                  destinations: item.company.destinations,
+                  score: item.score,
+                }))}
               />
             </CardContent>
           </Card>

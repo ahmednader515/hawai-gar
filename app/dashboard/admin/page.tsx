@@ -19,6 +19,9 @@ type SummaryRow = {
   notes: string | null;
   companyId: string | null;
   carrierId: string | null;
+  shipmentCompany: {
+    company_name: string | null;
+  } | null;
 };
 
 export default async function AdminDashboardPage() {
@@ -46,6 +49,11 @@ export default async function AdminDashboardPage() {
       notes: true,
       companyId: true,
       carrierId: true,
+      shipmentCompany: {
+        select: {
+          company_name: true,
+        },
+      },
     },
   });
 
@@ -89,7 +97,7 @@ export default async function AdminDashboardPage() {
       pickupDate: o.pickupDate,
       notes: o.notes,
       companyName: company?.companyProfile?.companyName ?? null,
-      carrierName: carrier?.driverProfile?.fullName ?? null,
+      carrierName: carrier?.driverProfile?.fullName ?? o.shipmentCompany?.company_name ?? null,
       carPlate: carrier?.driverProfile?.carPlate ?? null,
     };
   });
