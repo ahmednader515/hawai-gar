@@ -54,15 +54,16 @@ function isPointInSaudiArabia(lat: number, lng: number): boolean {
 }
 
 function inferRequestDestinationType(request: ShipmentRequestLike): "local" | "international" {
+  const { fromLat, fromLng, toLat, toLng } = request;
   const hasCoords =
-    isFiniteCoord(request.fromLat) &&
-    isFiniteCoord(request.fromLng) &&
-    isFiniteCoord(request.toLat) &&
-    isFiniteCoord(request.toLng);
+    isFiniteCoord(fromLat) &&
+    isFiniteCoord(fromLng) &&
+    isFiniteCoord(toLat) &&
+    isFiniteCoord(toLng);
 
   if (hasCoords) {
-    const fromInSaudi = isPointInSaudiArabia(request.fromLat, request.fromLng);
-    const toInSaudi = isPointInSaudiArabia(request.toLat, request.toLng);
+    const fromInSaudi = isPointInSaudiArabia(fromLat, fromLng);
+    const toInSaudi = isPointInSaudiArabia(toLat, toLng);
     // If either side is outside Saudi bounds, treat as international.
     return fromInSaudi && toInSaudi ? "local" : "international";
   }

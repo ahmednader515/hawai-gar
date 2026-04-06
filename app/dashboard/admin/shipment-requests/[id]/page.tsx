@@ -92,7 +92,6 @@ export default async function AdminShipmentRequestDetailsPage({
       fromText: true,
       toText: true,
       shipmentType: true,
-      containersCount: true,
 
       fromLat: true,
       fromLng: true,
