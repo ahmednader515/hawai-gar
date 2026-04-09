@@ -58,6 +58,7 @@ export default async function ClientOrdersPage() {
     priceSar: r.priceSar,
     estimatedPriceSar: r.estimatedPriceSar,
     adminPriceChanged: r.adminPriceChanged,
+    adminPriceChangeNotice: r.adminPriceChangeNotice,
     shipmentType: r.shipmentType,
     pickupDate: r.pickupDate,
     notes: r.notes,

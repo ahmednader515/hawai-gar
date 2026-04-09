@@ -16,6 +16,7 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
+  const verifyEmail = searchParams.get("verifyEmail");
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,6 +44,22 @@ export function LoginForm() {
   return (
     <div className="w-full max-w-sm">
       <form onSubmit={onSubmit} className="space-y-5">
+        {verifyEmail === "success" ? (
+          <p className="text-sm text-green-700 bg-green-50 px-3 py-2 rounded-lg">
+            {t("loginForm.verifyEmailSuccess")}
+          </p>
+        ) : null}
+        {verifyEmail === "expired" ? (
+          <p className="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">
+            {t("loginForm.verifyEmailExpired")}
+          </p>
+        ) : null}
+        {verifyEmail === "invalid" ? (
+          <p className="text-sm text-red-700 bg-red-50 px-3 py-2 rounded-lg">
+            {t("loginForm.verifyEmailInvalid")}
+          </p>
+        ) : null}
+
         <div className="space-y-2">
           <Label htmlFor="email" className="text-foreground font-medium">
             {t("loginForm.email")}

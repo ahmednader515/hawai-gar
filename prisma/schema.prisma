@@ -81,6 +81,20 @@ model VerificationToken {
   @@id([identifier, token])
 }
 
+/** Short-lived 6-digit code for email verification (e.g. guest checkout). */
+model EmailVerificationOtp {
+  email     String   @id
+  code      String
+  expires   DateTime
+  createdAt DateTime @default(now())
+}
+
+/** Email passed OTP and may complete guest registration until expiresAt. */
+model RegistrationVerification {
+  email     String   @id
+  expiresAt DateTime
+}
+
 model CompanyProfile {
   id                 String   @id @default(cuid())
   userId             String   @unique
@@ -191,6 +205,8 @@ model ShipmentRequest {
   priceSar        Float?
   estimatedPriceSar Float?
   adminPriceChanged Boolean @default(false)
+  /// Shown to the company when the admin sets a final price different from the estimate.
+  adminPriceChangeNotice String?
   containerSize   String?
   containersCount String?
   pickupDate      String?

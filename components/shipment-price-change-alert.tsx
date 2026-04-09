@@ -15,13 +15,21 @@ type Props = {
   locale: AppLocale;
   /** Slightly tighter padding when nested in dense layouts (e.g. dashboard cards). */
   compact?: boolean;
+  /** Optional message from admin when the final price differs from the estimate. */
+  adminNotice?: string | null;
 };
 
 /**
  * Shows admin price adjustment: intro + previous estimate (number + words) + connector + final (number + words).
  * Stacked layout avoids overlapping Arabic tafqeet lines from inline blocks.
  */
-export function ShipmentPriceChangeAlert({ estimatedPriceSar, priceSar, locale, compact }: Props) {
+export function ShipmentPriceChangeAlert({
+  estimatedPriceSar,
+  priceSar,
+  locale,
+  compact,
+  adminNotice,
+}: Props) {
   const { t } = useI18n();
 
   return (
@@ -67,6 +75,15 @@ export function ShipmentPriceChangeAlert({ estimatedPriceSar, priceSar, locale, 
           />
         </div>
       </div>
+
+      {adminNotice?.trim() ? (
+        <div className="mt-4 rounded-lg border border-amber-300/80 bg-white/90 p-3 text-sm text-amber-950 dark:border-amber-700/50 dark:bg-amber-950/50 dark:text-amber-50">
+          <p className="text-xs font-semibold uppercase tracking-wide text-amber-900 dark:text-amber-200/90">
+            {t("hero.adminPriceNoticeTitle")}
+          </p>
+          <p className="mt-2 whitespace-pre-wrap leading-relaxed [text-wrap:pretty]">{adminNotice.trim()}</p>
+        </div>
+      ) : null}
     </div>
   );
 }

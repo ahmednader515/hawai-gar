@@ -17,6 +17,9 @@ export async function PATCH(
     const body = await req.json();
     const decision = String(body?.decision ?? "");
     const priceSarRaw = body?.priceSar;
+    const priceChangeNoticeRaw = body?.priceChangeNotice;
+    const priceChangeNotice =
+      typeof priceChangeNoticeRaw === "string" ? priceChangeNoticeRaw.trim() : "";
     if (decision !== "approve" && decision !== "reject") {
       return NextResponse.json({ error: "قرار غير صالح" }, { status: 400 });
     }
@@ -65,7 +68,25 @@ export async function PATCH(
       const rounded = Math.round(priceSarNum);
       data.priceSar = rounded;
       const est = existing.estimatedPriceSar;
-      data.adminPriceChanged = typeof est === "number" ? Math.round(est) !== rounded : false;
+      const priceChangedFromEstimate =
+        typeof est === "number" ? Math.round(est) !== rounded : false;
+      data.adminPriceChanged = priceChangedFromEstimate;
+
+      if (priceChangedFromEstimate) {
+        if (!priceChangeNotice) {
+          return NextResponse.json(
+            { error: "ملاحظة مطلوبة عند تغيير السعر عن التقدير" },
+            { status: 400 },
+          );
+        }
+        data.adminPriceChangeNotice = priceChangeNotice;
+      } else {
+        data.adminPriceChangeNotice = null;
+      }
+    }
+
+    if (decision === "reject") {
+      data.adminPriceChangeNotice = null;
     }
 
     const updated = await prisma.shipmentRequest.update({

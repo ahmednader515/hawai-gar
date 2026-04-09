@@ -1,5 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
+import { Suspense } from "react";
+import { RegisterForm } from "./register-form";
 import { LoginToolbar } from "@/components/login-toolbar";
 import { getTranslations } from "@/lib/i18n/server";
 
@@ -28,28 +30,12 @@ export default async function RegisterPage() {
             <Image src="/logo.png" alt="hawai GAR" width={56} height={56} className="object-contain" />
           </Link>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground text-center mb-2 shrink-0">
-            {t("registerPage.title")}
+            {t("registerPage.titleCarrier")}
           </h1>
           <div className="w-20 h-1 bg-primary rounded-full mb-6 sm:mb-8" />
-          <div className="w-full max-w-md space-y-4">
-            <Link
-              href="/register/company"
-              className="block w-full text-right rounded-xl border-2 border-gray-200 bg-white px-5 py-4 hover:border-primary hover:bg-primary/5 transition-colors"
-            >
-              <div className="font-bold text-foreground mb-1">
-                {t("registerPage.companyCardTitle")}
-              </div>
-              <div className="text-sm text-muted-foreground">{t("registerPage.companyCardDesc")}</div>
-            </Link>
-
-            <Link
-              href="/register/carrier"
-              className="block w-full text-right rounded-xl border-2 border-gray-200 bg-white px-5 py-4 hover:border-primary hover:bg-primary/5 transition-colors"
-            >
-              <div className="font-bold text-foreground mb-1">{t("registerPage.carrierCardTitle")}</div>
-              <div className="text-sm text-muted-foreground">{t("registerPage.carrierCardDesc")}</div>
-            </Link>
-          </div>
+          <Suspense fallback={<div className="w-full max-w-md h-64 bg-gray-100 animate-pulse rounded-lg" />}>
+            <RegisterForm forcedRole="DRIVER" />
+          </Suspense>
           <p className="mt-6 text-center text-muted-foreground text-sm shrink-0">
             {t("registerForm.hasAccount")}{" "}
             <Link

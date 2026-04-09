@@ -13,6 +13,7 @@ import Link from "next/link";
 import type { PickedLocation } from "@/components/mapbox-location-picker";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { CopyableRequestId } from "@/components/copyable-request-id";
+import { TRUCK_SIZE_OPTIONS, TRUCK_TYPE_OPTIONS_BY_SIZE, type TruckOption } from "@/lib/truck-options";
 
 /** Mapbox + geocoder are large; load only when the shipper panel or track map is shown */
 const MapboxLocationPicker = dynamic(
@@ -76,54 +77,6 @@ type MyShipmentRequestItem = {
   createdAt: string;
 };
 
-type TruckOption = {
-  value: string;
-  ar: string;
-  en: string;
-};
-
-const TRUCK_SIZE_OPTIONS: TruckOption[] = [
-  { value: "تريلا", ar: "تريلا", en: "Trailer" },
-  { value: "سقس", ar: "سقس", en: "Saqs" },
-  { value: "لوري 7 متر", ar: "لوري 7 متر", en: "7m Lorry" },
-  { value: "لوري", ar: "لوري", en: "Lorry" },
-  { value: "دينا", ar: "دينا", en: "Dyna" },
-  { value: "ونيت", ar: "ونيت", en: "Pickup" },
-];
-
-const TRUCK_TYPE_OPTIONS_BY_SIZE: Record<string, TruckOption[]> = {
-  تريلا: [
-    { value: "جوانب الماني", ar: "جوانب الماني", en: "German sides" },
-    { value: "ستارة", ar: "ستارة", en: "Curtain side" },
-    { value: "ثلاجة مبرد", ar: "ثلاجة مبرد", en: "Refrigerated" },
-    { value: "سطحة", ar: "سطحة", en: "Flatbed" },
-    { value: "جوانب عالية", ar: "جوانب عالية", en: "High sides" },
-    { value: "تجميد", ar: "تجميد", en: "Freezer" },
-    { value: "سطحة ثلاث", ar: "سطحة ثلاث", en: "Triple-axle flatbed" },
-  ],
-  سقس: [
-    { value: "جوانب", ar: "جوانب", en: "Sides" },
-    { value: "ثلاجة مبرد", ar: "ثلاجة مبرد", en: "Refrigerated" },
-  ],
-  "لوري 7 متر": [{ value: "جوانب", ar: "جوانب", en: "Sides" }],
-  لوري: [
-    { value: "جوانب", ar: "جوانب", en: "Sides" },
-    { value: "صندوق مغلق", ar: "صندوق مغلق", en: "Closed box" },
-    { value: "ثلاجة مبرد", ar: "ثلاجة مبرد", en: "Refrigerated" },
-    { value: "كرين 5 طن", ar: "كرين 5 طن", en: "Crane 5t" },
-    { value: "كرين 7 طن", ar: "كرين 7 طن", en: "Crane 7t" },
-    { value: "ثلاجة مجمد", ar: "ثلاجة مجمد", en: "Freezer truck" },
-  ],
-  دينا: [
-    { value: "صندوق مغلق", ar: "صندوق مغلق", en: "Closed box" },
-    { value: "كرين", ar: "كرين", en: "Crane" },
-    { value: "ثلاجة مبرد", ar: "ثلاجة مبرد", en: "Refrigerated" },
-    { value: "جوانب", ar: "جوانب", en: "Sides" },
-    { value: "ثلاجة مجمد", ar: "ثلاجة مجمد", en: "Freezer truck" },
-  ],
-  ونيت: [{ value: "ونيت", ar: "ونيت", en: "Pickup" }],
-};
-
 export function HeroSection({
   isLoggedIn = false,
   userRole = null,
@@ -182,8 +135,13 @@ export function HeroSection({
   const [guestCompanyName, setGuestCompanyName] = useState("");
   const [guestContactPerson, setGuestContactPerson] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
+  const [guestStep, setGuestStep] = useState<"email" | "code" | "details">("email");
+  const [verifyCode, setVerifyCode] = useState("");
   const [guestSubmitLoading, setGuestSubmitLoading] = useState(false);
   const [guestSubmitError, setGuestSubmitError] = useState<string | null>(null);
+  const [otpSendLoading, setOtpSendLoading] = useState(false);
+  const [codeVerifyLoading, setCodeVerifyLoading] = useState(false);
+  const [otpResendLoading, setOtpResendLoading] = useState(false);
 
   useEffect(() => {
     if (!effectiveIsLoggedIn) return;
@@ -395,6 +353,9 @@ export function HeroSection({
     if (!canShip) {
       setPendingShipmentPayload(payload);
       setGuestPhone(shipperPhone.trim());
+      setGuestStep("email");
+      setVerifyCode("");
+      setGuestSubmitError(null);
       setGuestModalOpen(true);
       return;
     }
@@ -402,7 +363,112 @@ export function HeroSection({
     await sendShipmentRequest(payload);
   };
 
+  const sendRegistrationOtp = async () => {
+    const email = guestEmail.trim();
+    if (!email.includes("@")) {
+      setGuestSubmitError(t("registerForm.errorGeneric"));
+      return;
+    }
+
+    setOtpSendLoading(true);
+    setGuestSubmitError(null);
+    try {
+      const res = await fetch("/api/auth/request-registration-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setGuestSubmitError(
+          typeof data?.error === "string" ? data.error : t("registerForm.errorGeneric"),
+        );
+        return;
+      }
+      setGuestStep("code");
+      setVerifyCode("");
+    } catch {
+      setGuestSubmitError(t("registerForm.errorTryAgain"));
+    } finally {
+      setOtpSendLoading(false);
+    }
+  };
+
+  const confirmRegistrationCode = async () => {
+    const email = guestEmail.trim();
+    const code = verifyCode.replace(/\D/g, "").slice(0, 6);
+    if (code.length !== 6) {
+      setGuestSubmitError(t("hero.emailVerify.codeRequired"));
+      return;
+    }
+
+    setCodeVerifyLoading(true);
+    setGuestSubmitError(null);
+    try {
+      const res = await fetch("/api/auth/verify-registration-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setGuestSubmitError(
+          typeof data?.error === "string" ? data.error : t("hero.emailVerify.invalidOrExpired"),
+        );
+        return;
+      }
+      setGuestStep("details");
+    } catch {
+      setGuestSubmitError(t("hero.emailVerify.verifyFailed"));
+    } finally {
+      setCodeVerifyLoading(false);
+    }
+  };
+
+  const resendRegistrationOtp = async () => {
+    const email = guestEmail.trim();
+    if (!email) return;
+    setOtpResendLoading(true);
+    setGuestSubmitError(null);
+    try {
+      const res = await fetch("/api/auth/request-registration-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setGuestSubmitError(
+          typeof data?.error === "string" ? data.error : t("hero.emailVerify.verifyFailed"),
+        );
+      }
+    } catch {
+      setGuestSubmitError(t("hero.emailVerify.verifyFailed"));
+    } finally {
+      setOtpResendLoading(false);
+    }
+  };
+
+  const backFromCodeToEmail = async () => {
+    const email = guestEmail.trim();
+    setGuestSubmitError(null);
+    if (email) {
+      try {
+        await fetch("/api/auth/cancel-registration-verification", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+      } catch {
+        /* ignore */
+      }
+    }
+    setGuestStep("email");
+    setVerifyCode("");
+  };
+
   const createGuestAccountAndSubmit = async () => {
+    if (guestStep !== "details") return;
     const email = guestEmail.trim();
     const password = guestPassword.trim();
     const companyName = guestCompanyName.trim();
@@ -428,6 +494,7 @@ export function HeroSection({
           companyName,
           contactPerson,
           phone,
+          guestShipmentRegistration: true,
         }),
       });
       const registerData = await registerRes.json().catch(() => ({}));
@@ -449,6 +516,8 @@ export function HeroSection({
       }
 
       setGuestModalOpen(false);
+      setGuestStep("email");
+      setVerifyCode("");
       setPendingShipmentPayload(null);
       await sendShipmentRequest({
         ...pendingShipmentPayload,
@@ -459,6 +528,22 @@ export function HeroSection({
     } finally {
       setGuestSubmitLoading(false);
     }
+  };
+
+  const closeGuestModal = () => {
+    const email = guestEmail.trim();
+    if (email && (guestStep === "code" || guestStep === "details")) {
+      void fetch("/api/auth/cancel-registration-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+    }
+    setGuestModalOpen(false);
+    setGuestSubmitError(null);
+    setGuestStep("email");
+    setVerifyCode("");
+    setPendingShipmentPayload(null);
   };
 
   return (
@@ -533,6 +618,15 @@ export function HeroSection({
               onClick={() => setSidebarOpen(false)}
             >
               {t("common.dashboard")}
+            </Link>
+          )}
+          {!effectiveIsLoggedIn && (
+            <Link
+              href="/register"
+              className="py-3 px-3 rounded-lg font-medium text-foreground bg-primary/15 text-primary hover:bg-primary/25 active:bg-primary/25 transition-colors min-h-[44px] flex items-center mt-2 border-t border-border pt-4"
+              onClick={() => setSidebarOpen(false)}
+            >
+              {t("footer.register")}
             </Link>
           )}
           {effectiveIsLoggedIn && (
@@ -619,6 +713,12 @@ export function HeroSection({
                 </>
               ) : (
                 <>
+                  <Link
+                    href="/register"
+                    className="px-2.5 py-1.5 rounded-md text-xs font-medium sm:px-3 sm:py-1.5 sm:rounded-lg sm:text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap"
+                  >
+                    {t("footer.register")}
+                  </Link>
                   <Link
                     href="/login"
                     className="px-2.5 py-1.5 rounded-md text-xs font-medium sm:px-3 sm:py-1.5 sm:rounded-lg sm:text-sm text-white border border-white/60 hover:bg-white/10 hover:border-white/80 transition-colors whitespace-nowrap"
@@ -1013,6 +1113,10 @@ export function HeroSection({
                                 priceSar={trackingResult.data.priceSar}
                                 locale={locale}
                                 compact
+                                adminNotice={
+                                  (trackingResult.data as { adminPriceChangeNotice?: string | null })
+                                    .adminPriceChangeNotice
+                                }
                               />
                             </div>
                           )}
@@ -1165,7 +1269,7 @@ export function HeroSection({
               {t("hero.carrierBody")}
             </p>
             <Link
-              href="/register/carrier"
+              href="/register"
               className="inline-flex items-center justify-center w-full h-12 rounded-xl bg-white text-foreground font-semibold hover:bg-white/90 transition-colors"
             >
               {t("hero.carrierRegister")}
@@ -1176,83 +1280,170 @@ export function HeroSection({
 
       {guestModalOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/55 px-4">
-          <div className="w-full max-w-lg rounded-2xl border border-border bg-background p-5 shadow-2xl sm:p-6">
-            <h4 className="text-lg font-bold text-foreground">{t("hero.guestAccount.title")}</h4>
-            <p className="mt-1 text-sm text-muted-foreground">{t("hero.guestAccount.body")}</p>
+          <div
+            className="w-full max-w-lg rounded-2xl border border-border bg-background p-5 shadow-2xl sm:p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="guest-account-title"
+          >
+            <h4 id="guest-account-title" className="text-lg font-bold text-foreground">
+              {t("hero.guestAccount.title")}
+            </h4>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {guestStep === "email"
+                ? t("hero.guestAccount.bodyEmailStep")
+                : guestStep === "code"
+                  ? t("hero.guestAccount.bodyCodeStep")
+                  : t("hero.guestAccount.bodyDetailsStep")}
+            </p>
 
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5 sm:col-span-2">
+            {guestStep === "email" && (
+              <div className="mt-4 space-y-1.5">
                 <label className="text-sm font-medium text-foreground">{t("registerForm.email")}</label>
                 <input
                   type="email"
+                  autoComplete="email"
                   value={guestEmail}
                   onChange={(e) => setGuestEmail(e.target.value)}
                   placeholder={t("registerForm.placeholders.email")}
                   className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
               </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <label className="text-sm font-medium text-foreground">{t("registerForm.password")}</label>
-                <input
-                  type="password"
-                  value={guestPassword}
-                  onChange={(e) => setGuestPassword(e.target.value)}
-                  className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                />
+            )}
+
+            {guestStep === "code" && (
+              <div className="mt-4 space-y-3">
+                <p className="text-sm text-foreground break-all">
+                  <span className="font-medium text-muted-foreground">{t("registerForm.email")}: </span>
+                  {guestEmail.trim()}
+                </p>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground" htmlFor="guest-verify-code">
+                    {t("hero.emailVerify.codeLabel")}
+                  </label>
+                  <input
+                    id="guest-verify-code"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    value={verifyCode}
+                    onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    placeholder={t("hero.emailVerify.codePlaceholder")}
+                    className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 text-center text-lg tracking-[0.25em] font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  />
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">{t("registerForm.companyName")}</label>
-                <input
-                  value={guestCompanyName}
-                  onChange={(e) => setGuestCompanyName(e.target.value)}
-                  placeholder={t("registerForm.placeholders.companyName")}
-                  className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                />
+            )}
+
+            {guestStep === "details" && (
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="sm:col-span-2 rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm">
+                  <span className="font-medium text-muted-foreground">{t("hero.guestAccount.verifiedEmail")}: </span>
+                  <span className="break-all text-foreground">{guestEmail.trim()}</span>
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <label className="text-sm font-medium text-foreground">{t("registerForm.password")}</label>
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    value={guestPassword}
+                    onChange={(e) => setGuestPassword(e.target.value)}
+                    className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">{t("registerForm.companyName")}</label>
+                  <input
+                    value={guestCompanyName}
+                    onChange={(e) => setGuestCompanyName(e.target.value)}
+                    placeholder={t("registerForm.placeholders.companyName")}
+                    className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">{t("registerForm.contactPerson")}</label>
+                  <input
+                    value={guestContactPerson}
+                    onChange={(e) => setGuestContactPerson(e.target.value)}
+                    placeholder={t("registerForm.placeholders.contactPerson")}
+                    className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  />
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <label className="text-sm font-medium text-foreground">{t("registerForm.phone")}</label>
+                  <input
+                    value={guestPhone}
+                    onChange={(e) => setGuestPhone(e.target.value)}
+                    placeholder={t("registerForm.placeholders.phone")}
+                    className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  />
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">{t("registerForm.contactPerson")}</label>
-                <input
-                  value={guestContactPerson}
-                  onChange={(e) => setGuestContactPerson(e.target.value)}
-                  placeholder={t("registerForm.placeholders.contactPerson")}
-                  className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                />
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <label className="text-sm font-medium text-foreground">{t("registerForm.phone")}</label>
-                <input
-                  value={guestPhone}
-                  onChange={(e) => setGuestPhone(e.target.value)}
-                  placeholder={t("registerForm.placeholders.phone")}
-                  className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                />
-              </div>
-            </div>
+            )}
 
             {guestSubmitError ? (
               <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{guestSubmitError}</p>
             ) : null}
 
-            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end sm:gap-3">
               <button
                 type="button"
-                onClick={() => {
-                  setGuestModalOpen(false);
-                  setGuestSubmitError(null);
-                  setPendingShipmentPayload(null);
-                }}
+                onClick={closeGuestModal}
                 className="inline-flex items-center justify-center h-11 px-5 rounded-xl border border-border text-foreground hover:bg-muted transition-colors"
               >
                 {t("common.close")}
               </button>
-              <button
-                type="button"
-                onClick={createGuestAccountAndSubmit}
-                disabled={guestSubmitLoading}
-                className="inline-flex items-center justify-center h-11 px-5 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 disabled:opacity-70 disabled:cursor-not-allowed transition-colors"
-              >
-                {guestSubmitLoading ? t("hero.guestAccount.creating") : t("hero.guestAccount.submit")}
-              </button>
+
+              {guestStep === "email" && (
+                <button
+                  type="button"
+                  onClick={sendRegistrationOtp}
+                  disabled={otpSendLoading || !guestEmail.trim()}
+                  className="inline-flex items-center justify-center h-11 px-5 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 disabled:opacity-70 disabled:cursor-not-allowed transition-colors"
+                >
+                  {otpSendLoading ? t("hero.guestAccount.sendingCode") : t("hero.guestAccount.sendCode")}
+                </button>
+              )}
+
+              {guestStep === "code" && (
+                <>
+                  <button
+                    type="button"
+                    onClick={backFromCodeToEmail}
+                    disabled={otpSendLoading || codeVerifyLoading}
+                    className="inline-flex items-center justify-center h-11 px-5 rounded-xl border border-border text-foreground hover:bg-muted transition-colors disabled:opacity-70"
+                  >
+                    {t("hero.guestAccount.backToEmail")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resendRegistrationOtp}
+                    disabled={otpResendLoading || codeVerifyLoading}
+                    className="inline-flex items-center justify-center h-11 px-5 rounded-xl border border-border text-foreground hover:bg-muted transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {otpResendLoading ? t("hero.emailVerify.resending") : t("hero.emailVerify.resend")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmRegistrationCode}
+                    disabled={codeVerifyLoading || verifyCode.replace(/\D/g, "").length !== 6}
+                    className="inline-flex items-center justify-center h-11 px-5 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 disabled:opacity-70 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {codeVerifyLoading ? t("hero.guestAccount.verifyingCode") : t("hero.guestAccount.verifyCode")}
+                  </button>
+                </>
+              )}
+
+              {guestStep === "details" && (
+                <button
+                  type="button"
+                  onClick={createGuestAccountAndSubmit}
+                  disabled={guestSubmitLoading}
+                  className="inline-flex items-center justify-center h-11 px-5 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 disabled:opacity-70 disabled:cursor-not-allowed transition-colors"
+                >
+                  {guestSubmitLoading ? t("hero.guestAccount.creating") : t("hero.guestAccount.submit")}
+                </button>
+              )}
             </div>
           </div>
         </div>

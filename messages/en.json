@@ -103,7 +103,10 @@
     "submitting": "Signing in...",
     "invalidCredentials": "Invalid email or password",
     "genericError": "Something went wrong. Please try again.",
-    "emailPlaceholder": "example@company.com"
+    "emailPlaceholder": "example@company.com",
+    "verifyEmailSuccess": "Your email has been verified successfully. You can sign in now.",
+    "verifyEmailExpired": "This verification link has expired. Please register again or request a new link.",
+    "verifyEmailInvalid": "This verification link is invalid or already used."
   },
   "registerPage": {
     "title": "Create an account",
@@ -132,6 +135,8 @@
     "errorSignInAfter": "Account created but sign-in failed. Try signing in manually.",
     "errorTryAgain": "Something went wrong. Please try again.",
     "allFieldsRequired": "All fields are required",
+    "emailVerifyIntro": "Enter your email first. We’ll send a 6-digit code — you’ll choose a password and complete your profile after verification.",
+    "verifiedEmailLabel": "Verified email",
     "companyName": "Company name",
     "commercialRegister": "Commercial registration",
     "commercialRegisterOptional": "Commercial registration (optional)",
@@ -151,6 +156,8 @@
     "carTypeOptional": "Vehicle type (optional)",
     "carCapacity": "Load capacity",
     "carCapacityOptional": "Load capacity (optional)",
+    "truckSize": "Truck size",
+    "truckType": "Truck type",
     "placeholders": {
       "email": "example@company.com",
       "companyName": "Example Transport Co.",
@@ -161,6 +168,8 @@
       "carPlate": "ABC 1234",
       "carType": "Container truck",
       "carCapacity": "20 ft / 40 ft",
+      "truckSize": "Select truck size",
+      "truckType": "Select truck type",
       "phone": "05xxxxxxxx"
     }
   },
@@ -383,6 +392,9 @@
       "shipmentActionsSectionTitle": "Admin decision (after carrier)",
       "shipmentActionsFinalPriceLabel": "Final price (SAR)",
       "shipmentActionsEstimatedPrice": "Previous estimate: {amount} SAR",
+      "shipmentActionsPriceChangeNoticeLabel": "Notice to the company (shown when they track the request)",
+      "shipmentActionsPriceChangeNoticePlaceholder": "Briefly explain why the final price differs from the estimate…",
+      "shipmentActionsPriceChangeNoticeRequired": "Enter a notice for the company when the final price differs from the estimate.",
       "shipmentActionsLoading": "Loading…",
       "shipmentActionsApprove": "Final approval of price",
       "shipmentActionsReject": "Reject",
@@ -490,6 +502,7 @@
     "priceFinal": "Final price",
     "price": "Price",
     "priceChanged": "Admin updated the price",
+    "adminPriceNoticeTitle": "Message from admin",
     "priceChangePreviousLabel": "Previous estimate",
     "priceChangeFinalLabel": "Final approved price",
     "priceConnector": "to",
@@ -521,10 +534,33 @@
     "partnersAlt": "Our partners",
     "contactPhonePlaceholder": "05xxxxxxxx",
     "guestAccount": {
-      "title": "Complete your company details",
-      "body": "To send this request, we'll create your company account now and submit the request automatically.",
+      "title": "Send your shipment request",
+      "body": "Verify your email first, then create your company account. We’ll submit the request right after.",
+      "bodyEmailStep": "Enter your email and we’ll send a 6-digit code. No account is created until you verify.",
+      "bodyCodeStep": "Enter the code we sent to your inbox.",
+      "bodyDetailsStep": "Your email is verified. Add a password and company details to finish.",
       "submit": "Create account and send request",
-      "creating": "Creating account..."
+      "creating": "Creating account…",
+      "sendCode": "Send verification code",
+      "sendingCode": "Sending…",
+      "verifyCode": "Verify email",
+      "verifyingCode": "Verifying…",
+      "backToEmail": "Change email",
+      "verifiedEmail": "Verified email"
+    },
+    "emailVerify": {
+      "title": "Verify your email",
+      "body": "We sent a 6-digit code to {email}. Enter it below to confirm your account and submit your shipment request.",
+      "codeLabel": "Verification code",
+      "codePlaceholder": "000000",
+      "submit": "Verify and submit request",
+      "verifying": "Verifying…",
+      "resend": "Resend code",
+      "resending": "Sending…",
+      "invalidOrExpired": "Invalid or expired code. Try again or request a new code.",
+      "verifyFailed": "Could not verify. Try again.",
+      "emailNotSent": "We could not send the verification email. Check server email settings or try again later.",
+      "codeRequired": "Enter the full 6-digit code."
     },
     "types": {
       "fragile": "Fragile",

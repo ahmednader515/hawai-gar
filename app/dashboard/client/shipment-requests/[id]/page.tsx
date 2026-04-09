@@ -67,6 +67,7 @@ export default async function ClientShipmentRequestDetailPage({
       priceSar: true,
       estimatedPriceSar: true,
       adminPriceChanged: true,
+      adminPriceChangeNotice: true,
       containerSize: true,
       containersCount: true,
       pickupDate: true,
@@ -260,6 +261,7 @@ export default async function ClientShipmentRequestDetailPage({
                     estimatedPriceSar={r.estimatedPriceSar!}
                     priceSar={r.priceSar!}
                     locale={locale}
+                    adminNotice={r.adminPriceChangeNotice}
                   />
                 </div>
               )}

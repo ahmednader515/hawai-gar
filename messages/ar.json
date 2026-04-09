@@ -103,7 +103,10 @@
     "submitting": "جاري تسجيل الدخول...",
     "invalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة",
     "genericError": "حدث خطأ، حاول مرة أخرى",
-    "emailPlaceholder": "example@company.com"
+    "emailPlaceholder": "example@company.com",
+    "verifyEmailSuccess": "تم تأكيد البريد الإلكتروني بنجاح. يمكنك تسجيل الدخول الآن.",
+    "verifyEmailExpired": "رابط التأكيد منتهي الصلاحية. أنشئ حساباً جديداً أو اطلب رابطاً جديداً.",
+    "verifyEmailInvalid": "رابط التأكيد غير صالح أو تم استخدامه مسبقاً."
   },
   "registerPage": {
     "title": "إنشاء حساب جديد",
@@ -132,6 +135,8 @@
     "errorSignInAfter": "تم إنشاء الحساب لكن تسجيل الدخول فشل. جرّب تسجيل الدخول يدوياً.",
     "errorTryAgain": "حدث خطأ، حاول مرة أخرى",
     "allFieldsRequired": "جميع الحقول مطلوبة",
+    "emailVerifyIntro": "أدخل بريدك أولاً. سنرسل رمزاً من 6 أرقام، ثم تختار كلمة المرور وتكمل بياناتك بعد التحقق.",
+    "verifiedEmailLabel": "البريد المُؤكَّد",
     "companyName": "اسم الشركة",
     "commercialRegister": "السجل التجاري",
     "commercialRegisterOptional": "السجل التجاري (اختياري)",
@@ -151,6 +156,8 @@
     "carTypeOptional": "نوع المركبة (اختياري)",
     "carCapacity": "سعة الحمولة",
     "carCapacityOptional": "سعة الحمولة (اختياري)",
+    "truckSize": "حجم الشاحنة",
+    "truckType": "نوع الشاحنة",
     "placeholders": {
       "email": "example@company.com",
       "companyName": "الشركة السعودية للنقل",
@@ -161,6 +168,8 @@
       "carPlate": "أ ب ج ١٢٣٤",
       "carType": "شاحنة حاويات",
       "carCapacity": "20 قدم / 40 قدم",
+      "truckSize": "اختر حجم الشاحنة",
+      "truckType": "اختر نوع الشاحنة",
       "phone": "05xxxxxxxx"
     }
   },
@@ -383,6 +392,9 @@
       "shipmentActionsSectionTitle": "قرار الأدمن (بعد شركة النقل)",
       "shipmentActionsFinalPriceLabel": "السعر النهائي (ر.س)",
       "shipmentActionsEstimatedPrice": "السعر التقديري السابق: {amount} ر.س",
+      "shipmentActionsPriceChangeNoticeLabel": "ملاحظة للشركة (تظهر عند تتبع الطلب)",
+      "shipmentActionsPriceChangeNoticePlaceholder": "اشرح باختصار سبب اختلاف السعر النهائي عن التقدير…",
+      "shipmentActionsPriceChangeNoticeRequired": "أدخل ملاحظة للشركة عندما يختلف السعر النهائي عن التقدير.",
       "shipmentActionsLoading": "جاري...",
       "shipmentActionsApprove": "موافقة نهائية على السعر",
       "shipmentActionsReject": "رفض",
@@ -490,6 +502,7 @@
     "priceFinal": "السعر النهائي",
     "price": "السعر",
     "priceChanged": "تم تعديل السعر بواسطة الأدمن",
+    "adminPriceNoticeTitle": "ملاحظة من الإدارة",
     "priceChangePreviousLabel": "السعر التقديري السابق",
     "priceChangeFinalLabel": "السعر النهائي المعتمد",
     "priceConnector": "إلى",
@@ -521,11 +534,33 @@
     "partnersAlt": "شركاؤنا",
     "contactPhonePlaceholder": "05xxxxxxxx",
     "guestAccount": {
-      "title": "أكمل بيانات الشركة لإنشاء الحساب",
-      "body": "لإرسال الطلب سننشئ لك حساب شركة مباشرة ثم نرسل الطلب تلقائياً."
-      ,
+      "title": "إرسال طلب الشحن",
+      "body": "أكّد بريدك أولاً ثم أنشئ حساب الشركة. نرسل الطلب مباشرة بعد ذلك.",
+      "bodyEmailStep": "أدخل بريدك لنرسل رمزاً من 6 أرقام. لا يُنشأ حساب قبل التحقق.",
+      "bodyCodeStep": "أدخل الرمز الذي أرسلناه إلى بريدك.",
+      "bodyDetailsStep": "تم التحقق من البريد. أضف كلمة المرور وبيانات الشركة للإنهاء.",
       "submit": "إنشاء الحساب وإرسال الطلب",
-      "creating": "جاري إنشاء الحساب..."
+      "creating": "جاري إنشاء الحساب…",
+      "sendCode": "إرسال رمز التحقق",
+      "sendingCode": "جاري الإرسال…",
+      "verifyCode": "تأكيد البريد",
+      "verifyingCode": "جاري التحقق…",
+      "backToEmail": "تغيير البريد",
+      "verifiedEmail": "البريد المُؤكَّد"
+    },
+    "emailVerify": {
+      "title": "تأكيد البريد الإلكتروني",
+      "body": "أرسلنا رمزاً مكوّناً من 6 أرقام إلى {email}. أدخل الرمز أدناه لتأكيد حسابك وإرسال طلب الشحن.",
+      "codeLabel": "رمز التحقق",
+      "codePlaceholder": "000000",
+      "submit": "تأكيد وإرسال الطلب",
+      "verifying": "جاري التحقق…",
+      "resend": "إعادة إرسال الرمز",
+      "resending": "جاري الإرسال…",
+      "invalidOrExpired": "رمز غير صحيح أو منتهي. حاول مرة أخرى أو اطلب رمزاً جديداً.",
+      "verifyFailed": "تعذر التحقق. حاول مرة أخرى.",
+      "emailNotSent": "تعذر إرسال بريد التحقق. تحقق من إعدادات البريد على الخادم أو حاول لاحقاً.",
+      "codeRequired": "أدخل الرمز المكوّن من 6 أرقام."
     },
     "types": {
       "fragile": "قابل للكسر",

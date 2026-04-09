@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcrypt";
 import { prisma } from "@/lib/db";
 import { UserRole } from "@prisma/client";
+import { normalizeEmailKey } from "@/lib/email-verification";
 
 export async function POST(req: Request) {
   try {
@@ -23,9 +24,11 @@ export async function POST(req: Request) {
       carPlate,
       carType,
       carCapacity,
+      guestShipmentRegistration,
+      registrationPreVerified,
     } = body;
 
-    if (!email || !password || !role) {
+    if (!email || !String(password).trim() || !role) {
       return NextResponse.json(
         { error: "البريد الإلكتروني وكلمة المرور ونوع الحساب مطلوبة" },
         { status: 400 }
@@ -62,69 +65,150 @@ export async function POST(req: Request) {
           { status: 400 }
         );
       }
-      const user = await prisma.user.create({
-        data: {
-          email: String(email).trim(),
-          name: name ? String(name) : null,
-          passwordHash,
-          role: UserRole.COMPANY,
-        },
-      });
-      await prisma.companyProfile.create({
-        data: {
+
+      const normalizedEmail = String(email).trim();
+      const emailKey = normalizeEmailKey(normalizedEmail);
+      const isGuestShipment = Boolean(guestShipmentRegistration);
+      const isPreVerified = Boolean(registrationPreVerified);
+
+      if (!isGuestShipment && !isPreVerified) {
+        return NextResponse.json(
+          { error: "يجب تأكيد البريد الإلكتروني برمز التحقق قبل إنشاء الحساب" },
+          { status: 400 },
+        );
+      }
+
+      try {
+        const { user } = await prisma.$transaction(async (tx) => {
+          const gate = await tx.registrationVerification.findUnique({
+            where: { email: emailKey },
+          });
+          if (!gate || gate.expiresAt < new Date()) {
+            throw Object.assign(new Error("NO_GATE"), { code: "NO_GATE" });
+          }
+
+          const createdUser = await tx.user.create({
+            data: {
+              email: normalizedEmail,
+              name: name ? String(name) : null,
+              passwordHash,
+              role: UserRole.COMPANY,
+              emailVerified: new Date(),
+            },
+          });
+
+          await tx.companyProfile.create({
+            data: {
+              userId: createdUser.id,
+              companyName: String(companyName),
+              commercialRegister: commercialRegister ? String(commercialRegister) : null,
+              contactPerson: String(contactPerson),
+              phone: String(phone),
+              address: address ? String(address) : null,
+              city: city ? String(city) : null,
+            },
+          });
+
+          await tx.registrationVerification.delete({
+            where: { email: emailKey },
+          });
+
+          return { user: createdUser };
+        });
+
+        return NextResponse.json({
+          ok: true,
           userId: user.id,
-          companyName: String(companyName),
-          commercialRegister: commercialRegister ? String(commercialRegister) : null,
-          contactPerson: String(contactPerson),
-          phone: String(phone),
-          address: address ? String(address) : null,
-          city: city ? String(city) : null,
-        },
-      });
-      return NextResponse.json({
-        ok: true,
-        userId: user.id,
-        role: user.role,
-        redirect: "/?openShipment=1",
-      });
+          role: user.role,
+          redirect: "/?openShipment=1",
+          verificationEmailSent: false,
+        });
+      } catch (err: unknown) {
+        if (err && typeof err === "object" && "code" in err && (err as { code?: string }).code === "NO_GATE") {
+          return NextResponse.json(
+            { error: "يجب تأكيد البريد الإلكتروني برمز التحقق قبل إنشاء الحساب" },
+            { status: 400 },
+          );
+        }
+        throw err;
+      }
     }
 
     if (r === UserRole.DRIVER) {
-      if (!fullName || !phone || !carPlate) {
+      if (!fullName || !phone || !carPlate || !carType || !carCapacity) {
         return NextResponse.json(
           {
             error:
-              "الاسم الكامل والهاتف ورقم اللوحة مطلوبة لإنشاء حساب شركة نقل",
+              "الاسم الكامل والهاتف ورقم اللوحة ونوع الشاحنة وحجم الشاحنة مطلوبة لإنشاء حساب شركة نقل",
           },
           { status: 400 }
         );
       }
-      const user = await prisma.user.create({
-        data: {
-          email: String(email).trim(),
-          name: fullName ? String(fullName) : null,
-          passwordHash,
-          role: UserRole.DRIVER,
-        },
-      });
-      await prisma.driverProfile.create({
-        data: {
+      if (!registrationPreVerified) {
+        return NextResponse.json(
+          { error: "يجب تأكيد البريد الإلكتروني برمز التحقق قبل إنشاء الحساب" },
+          { status: 400 },
+        );
+      }
+
+      const normalizedEmail = String(email).trim();
+      const emailKey = normalizeEmailKey(normalizedEmail);
+
+      try {
+        const { user } = await prisma.$transaction(async (tx) => {
+          const gate = await tx.registrationVerification.findUnique({
+            where: { email: emailKey },
+          });
+          if (!gate || gate.expiresAt < new Date()) {
+            throw Object.assign(new Error("NO_GATE"), { code: "NO_GATE" });
+          }
+
+          const createdUser = await tx.user.create({
+            data: {
+              email: normalizedEmail,
+              name: fullName ? String(fullName) : null,
+              passwordHash,
+              role: UserRole.DRIVER,
+              emailVerified: new Date(),
+            },
+          });
+
+          await tx.driverProfile.create({
+            data: {
+              userId: createdUser.id,
+              fullName: String(fullName),
+              nationalId: nationalId ? String(nationalId) : null,
+              phone: String(phone),
+              licenseNumber: licenseNumber ? String(licenseNumber) : null,
+              carPlate: String(carPlate),
+              carType: String(carType),
+              carCapacity: String(carCapacity),
+            },
+          });
+
+          await tx.registrationVerification.delete({
+            where: { email: emailKey },
+          });
+
+          return { user: createdUser };
+        });
+
+        return NextResponse.json({
+          ok: true,
           userId: user.id,
-          fullName: String(fullName),
-          nationalId: nationalId ? String(nationalId) : null,
-          phone: String(phone),
-          licenseNumber: licenseNumber ? String(licenseNumber) : null,
-          carPlate: String(carPlate),
-          carType: carType ? String(carType) : null,
-          carCapacity: carCapacity ? String(carCapacity) : null,
-        },
-      });
-      return NextResponse.json({
-        ok: true,
-        userId: user.id,
-        role: user.role,
-        redirect: "/dashboard/client",
-      });
+          role: user.role,
+          redirect: "/dashboard/client",
+          verificationEmailSent: false,
+        });
+      } catch (err: unknown) {
+        if (err && typeof err === "object" && "code" in err && (err as { code?: string }).code === "NO_GATE") {
+          return NextResponse.json(
+            { error: "يجب تأكيد البريد الإلكتروني برمز التحقق قبل إنشاء الحساب" },
+            { status: 400 },
+          );
+        }
+        throw err;
+      }
     }
 
     return NextResponse.json({ error: "طلب غير صالح" }, { status: 400 });

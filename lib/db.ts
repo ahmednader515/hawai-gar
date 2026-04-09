@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { withAccelerate } from "@prisma/extension-accelerate";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-const globalForPrisma = globalThis as unknown as { prisma: ReturnType<typeof createPrisma> };
+const globalForPrisma = globalThis as unknown as { prisma?: ReturnType<typeof createPrisma> };
 
 /**
  * Runtime DB connection (Next.js / server):
@@ -42,7 +42,30 @@ function createPrisma() {
   );
 }
 
-const prismaInstance = globalForPrisma.prisma ?? createPrisma();
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prismaInstance;
+/** Models added after initial deploy — if missing on the cached client, rebuild Prisma (see getPrismaSingleton). */
+const REQUIRED_DELEGATES = ["emailVerificationOtp", "registrationVerification"] as const;
 
-export const prisma = prismaInstance as PrismaClient;
+function clientHasRequiredDelegates(client: unknown): boolean {
+  if (!client || typeof client !== "object") return false;
+  const c = client as Record<string, { deleteMany?: unknown } | undefined>;
+  return REQUIRED_DELEGATES.every((name) => typeof c[name]?.deleteMany === "function");
+}
+
+function getPrismaSingleton(): ReturnType<typeof createPrisma> {
+  const cached = globalForPrisma.prisma;
+  if (cached && clientHasRequiredDelegates(cached)) {
+    return cached;
+  }
+
+  const fresh = createPrisma();
+  if (!clientHasRequiredDelegates(fresh)) {
+    throw new Error(
+      "Prisma Client is out of date (missing RegistrationVerification or EmailVerificationOtp). Run `npx prisma generate`, then restart `npm run dev`.",
+    );
+  }
+
+  globalForPrisma.prisma = fresh;
+  return fresh;
+}
+
+export const prisma = getPrismaSingleton() as PrismaClient;

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { AdminInvoiceLinkFields } from "./invoice-link-fields";
 
@@ -54,6 +55,7 @@ export function ShipmentRequestAdminActions({
   const [editedPriceSar, setEditedPriceSar] = useState<string>(() =>
     priceSar == null ? "" : String(Math.round(priceSar)),
   );
+  const [priceChangeNotice, setPriceChangeNotice] = useState("");
   const [invoiceLinkInput, setInvoiceLinkInput] = useState(() => invoiceLinkProp ?? "");
   const [selectedShipmentCompanyId, setSelectedShipmentCompanyId] = useState<string>(
     assignedShipmentCompany?.id ?? "",
@@ -78,6 +80,18 @@ export function ShipmentRequestAdminActions({
   useEffect(() => {
     setSelectedShipmentCompanyId(assignedShipmentCompany?.id ?? "");
   }, [assignedShipmentCompany?.id]);
+
+  const parsedFinalPriceSar = useMemo(() => {
+    const raw = editedPriceSar.trim();
+    if (!raw) return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? Math.round(n) : null;
+  }, [editedPriceSar]);
+
+  const priceDiffersFromEstimate =
+    estimatedPriceSar != null &&
+    parsedFinalPriceSar != null &&
+    Math.round(estimatedPriceSar) !== parsedFinalPriceSar;
 
   async function assignShipmentCompany() {
     if (!selectedShipmentCompanyId) {
@@ -164,10 +178,27 @@ export function ShipmentRequestAdminActions({
         return;
       }
 
+      const est = estimatedPriceSar;
+      const roundedFinal = priceSarNum != null ? Math.round(priceSarNum) : null;
+      const needsNotice =
+        decision === "approve" &&
+        typeof est === "number" &&
+        roundedFinal != null &&
+        Math.round(est) !== roundedFinal;
+
+      if (needsNotice && !priceChangeNotice.trim()) {
+        setError(t(`${a}.shipmentActionsPriceChangeNoticeRequired`));
+        return;
+      }
+
       const res = await fetch(`/api/admin/shipment-requests/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ decision, priceSar: priceSarNum }),
+        body: JSON.stringify({
+          decision,
+          priceSar: priceSarNum,
+          priceChangeNotice: needsNotice ? priceChangeNotice.trim() : "",
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -332,6 +363,24 @@ export function ShipmentRequestAdminActions({
                   String(Math.round(estimatedPriceSar)),
                 )}
               </p>
+            )}
+            {priceDiffersFromEstimate && (
+              <div className="space-y-1.5 pt-1">
+                <Label htmlFor="admin-price-change-notice">{t(`${a}.shipmentActionsPriceChangeNoticeLabel`)}</Label>
+                <textarea
+                  id="admin-price-change-notice"
+                  rows={4}
+                  value={priceChangeNotice}
+                  onChange={(e) => setPriceChangeNotice(e.target.value)}
+                  placeholder={t(`${a}.shipmentActionsPriceChangeNoticePlaceholder`)}
+                  disabled={actionBusy}
+                  className={cn(
+                    "flex min-h-[5rem] w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors outline-none",
+                    "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+                    "disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30 resize-y",
+                  )}
+                />
+              </div>
             )}
           </div>
 

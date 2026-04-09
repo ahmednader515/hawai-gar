@@ -6,26 +6,31 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/components/providers/i18n-provider";
+import { TRUCK_SIZE_OPTIONS, TRUCK_TYPE_OPTIONS_BY_SIZE } from "@/lib/truck-options";
 
 const inputClass =
   "h-11 bg-sky-50/80 dark:bg-sky-950/20 border-gray-200 focus:ring-primary/30 focus:border-primary";
 const btnPrimary =
-  "h-11 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold transition-colors disabled:opacity-70 disabled:cursor-not-allowed";
-const btnOutline =
-  "h-11 rounded-lg border-2 border-gray-200 bg-white text-foreground font-medium hover:bg-gray-50 hover:border-gray-300 transition-colors disabled:opacity-70";
+  "inline-flex h-11 min-h-11 items-center justify-center rounded-lg bg-primary px-5 py-2 sm:px-6 hover:bg-primary/90 text-primary-foreground text-sm font-semibold transition-colors disabled:opacity-70 disabled:cursor-not-allowed";
 
 type Role = "COMPANY" | "DRIVER";
 
 export function RegisterForm({ forcedRole }: { forcedRole?: Role }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const searchParams = useSearchParams();
   const typeParam = searchParams.get("type");
   const initialRoleFromUrl = useMemo<Role | "">(
     () => (typeParam === "company" ? "COMPANY" : typeParam === "carrier" ? "DRIVER" : ""),
-    [typeParam]
+    [typeParam],
   );
   const initialRole = forcedRole ?? initialRoleFromUrl;
+  const [step, setStep] = useState<"email" | "code" | "form">("email");
   const [email, setEmail] = useState("");
+  const [verifyCode, setVerifyCode] = useState("");
+  const [otpSendLoading, setOtpSendLoading] = useState(false);
+  const [codeVerifyLoading, setCodeVerifyLoading] = useState(false);
+  const [otpResendLoading, setOtpResendLoading] = useState(false);
+
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState<Role | "">(initialRole);
@@ -44,6 +49,104 @@ export function RegisterForm({ forcedRole }: { forcedRole?: Role }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const isArabic = locale === "ar";
+  const truckTypeOptions = useMemo(() => TRUCK_TYPE_OPTIONS_BY_SIZE[carCapacity] ?? [], [carCapacity]);
+
+  async function sendRegistrationOtp() {
+    const e = email.trim();
+    if (!e.includes("@")) {
+      setError(t("registerForm.errorGeneric"));
+      return;
+    }
+    setOtpSendLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/request-registration-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: e }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(typeof data?.error === "string" ? data.error : t("registerForm.errorGeneric"));
+        return;
+      }
+      setStep("code");
+      setVerifyCode("");
+    } catch {
+      setError(t("registerForm.errorTryAgain"));
+    } finally {
+      setOtpSendLoading(false);
+    }
+  }
+
+  async function confirmRegistrationCode() {
+    const e = email.trim();
+    const code = verifyCode.replace(/\D/g, "").slice(0, 6);
+    if (code.length !== 6) {
+      setError(t("hero.emailVerify.codeRequired"));
+      return;
+    }
+    setCodeVerifyLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/verify-registration-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: e, code }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(typeof data?.error === "string" ? data.error : t("hero.emailVerify.invalidOrExpired"));
+        return;
+      }
+      setStep("form");
+    } catch {
+      setError(t("hero.emailVerify.verifyFailed"));
+    } finally {
+      setCodeVerifyLoading(false);
+    }
+  }
+
+  async function resendRegistrationOtp() {
+    const e = email.trim();
+    if (!e) return;
+    setOtpResendLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/request-registration-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: e }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(typeof data?.error === "string" ? data.error : t("hero.emailVerify.verifyFailed"));
+      }
+    } catch {
+      setError(t("hero.emailVerify.verifyFailed"));
+    } finally {
+      setOtpResendLoading(false);
+    }
+  }
+
+  async function backFromCodeToEmail() {
+    const e = email.trim();
+    setError("");
+    if (e) {
+      try {
+        await fetch("/api/auth/cancel-registration-verification", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: e }),
+        });
+      } catch {
+        /* ignore */
+      }
+    }
+    setStep("email");
+    setVerifyCode("");
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -56,6 +159,7 @@ export function RegisterForm({ forcedRole }: { forcedRole?: Role }) {
               email,
               password,
               role: "COMPANY",
+              registrationPreVerified: true,
               companyName,
               commercialRegister: commercialRegister || undefined,
               contactPerson,
@@ -67,6 +171,7 @@ export function RegisterForm({ forcedRole }: { forcedRole?: Role }) {
               email,
               password,
               role: "DRIVER",
+              registrationPreVerified: true,
               fullName,
               phone,
               nationalId: nationalId || undefined,
@@ -112,9 +217,93 @@ export function RegisterForm({ forcedRole }: { forcedRole?: Role }) {
     DRIVER: t("registerPage.carrierCardTitle"),
   };
 
+  if (step === "email") {
+    return (
+      <div className="w-full max-w-md space-y-4">
+        <h2 className="text-lg font-semibold text-foreground">{t("registerForm.heading")}</h2>
+        <p className="text-sm text-muted-foreground">{t("registerForm.emailVerifyIntro")}</p>
+        <div className="space-y-2">
+          <Label htmlFor="email">{t("registerForm.email")}</Label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder={t("registerForm.placeholders.email")}
+            className={inputClass}
+          />
+        </div>
+        {error && <p className="text-sm text-red-600 bg-red-50 dark:bg-red-950/30 px-3 py-2 rounded-lg">{error}</p>}
+        <button
+          type="button"
+          onClick={() => void sendRegistrationOtp()}
+          disabled={otpSendLoading || !email.trim()}
+          className={`w-full ${btnPrimary}`}
+        >
+          {otpSendLoading ? t("hero.guestAccount.sendingCode") : t("hero.guestAccount.sendCode")}
+        </button>
+      </div>
+    );
+  }
+
+  if (step === "code") {
+    return (
+      <div className="w-full max-w-md space-y-4">
+        <h2 className="text-lg font-semibold text-foreground">{t("hero.emailVerify.title")}</h2>
+        <p className="text-sm text-muted-foreground">
+          {t("hero.emailVerify.body").replace("{email}", email.trim())}
+        </p>
+        <div className="space-y-2">
+          <Label htmlFor="reg-verify-code">{t("hero.emailVerify.codeLabel")}</Label>
+          <Input
+            id="reg-verify-code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            value={verifyCode}
+            onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            placeholder={t("hero.emailVerify.codePlaceholder")}
+            className={`${inputClass} text-center text-lg tracking-[0.25em] font-mono`}
+          />
+        </div>
+        {error && <p className="text-sm text-red-600 bg-red-50 dark:bg-red-950/30 px-3 py-2 rounded-lg">{error}</p>}
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end sm:gap-3">
+          <button
+            type="button"
+            onClick={() => void backFromCodeToEmail()}
+            className="h-11 w-full rounded-lg border border-border px-4 text-sm font-semibold text-foreground hover:bg-muted sm:w-auto"
+          >
+            {t("hero.guestAccount.backToEmail")}
+          </button>
+          <button
+            type="button"
+            onClick={() => void resendRegistrationOtp()}
+            disabled={otpResendLoading || codeVerifyLoading}
+            className="h-11 w-full rounded-lg border border-border px-4 text-sm font-semibold text-foreground hover:bg-muted disabled:opacity-70 sm:w-auto"
+          >
+            {otpResendLoading ? t("hero.emailVerify.resending") : t("hero.emailVerify.resend")}
+          </button>
+          <button
+            type="button"
+            onClick={() => void confirmRegistrationCode()}
+            disabled={codeVerifyLoading || verifyCode.replace(/\D/g, "").length !== 6}
+            className={`w-full sm:w-auto ${btnPrimary}`}
+          >
+            {codeVerifyLoading ? t("hero.guestAccount.verifyingCode") : t("hero.guestAccount.verifyCode")}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-md">
-      <h2 className="text-lg font-semibold text-foreground mb-5">{t("registerForm.heading")}</h2>
+      <h2 className="text-lg font-semibold text-foreground mb-2">{t("registerForm.heading")}</h2>
+      <p className="text-sm text-muted-foreground mb-5">
+        <span className="font-medium text-foreground">{t("registerForm.verifiedEmailLabel")}: </span>
+        <span className="break-all">{email.trim()}</span>
+      </p>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -122,22 +311,17 @@ export function RegisterForm({ forcedRole }: { forcedRole?: Role }) {
             setError(t("registerForm.allFieldsRequired"));
             return;
           }
-          onSubmit(e);
+          if (
+            role === "DRIVER" &&
+            (!fullName || !phone || !carPlate || !carCapacity || !carType)
+          ) {
+            setError(t("registerForm.allFieldsRequired"));
+            return;
+          }
+          void onSubmit(e);
         }}
         className="space-y-4"
       >
-        <div className="space-y-2">
-          <Label htmlFor="email">{t("registerForm.email")}</Label>
-          <Input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            placeholder={t("registerForm.placeholders.email")}
-            className={inputClass}
-          />
-        </div>
         <div className="space-y-2">
           <Label htmlFor="password">{t("registerForm.password")}</Label>
           <div className="relative">
@@ -147,7 +331,6 @@ export function RegisterForm({ forcedRole }: { forcedRole?: Role }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={6}
               autoComplete="new-password"
               className={`${inputClass} pe-28`}
             />
@@ -308,22 +491,40 @@ export function RegisterForm({ forcedRole }: { forcedRole?: Role }) {
               />
             </div>
             <div className="space-y-2">
-              <Label>{t("registerForm.carTypeOptional")}</Label>
-              <Input
-                value={carType}
-                onChange={(e) => setCarType(e.target.value)}
-                placeholder={t("registerForm.placeholders.carType")}
-                className={inputClass}
-              />
+              <Label>{t("registerForm.truckSize")}</Label>
+              <select
+                value={carCapacity}
+                onChange={(e) => {
+                  setCarCapacity(e.target.value);
+                  setCarType("");
+                }}
+                required
+                className={`${inputClass} w-full rounded-md px-3 focus:outline-none`}
+              >
+                <option value="">{t("registerForm.placeholders.truckSize")}</option>
+                {TRUCK_SIZE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {isArabic ? option.ar : option.en}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="space-y-2">
-              <Label>{t("registerForm.carCapacityOptional")}</Label>
-              <Input
-                value={carCapacity}
-                onChange={(e) => setCarCapacity(e.target.value)}
-                placeholder={t("registerForm.placeholders.carCapacity")}
-                className={inputClass}
-              />
+              <Label>{t("registerForm.truckType")}</Label>
+              <select
+                value={carType}
+                onChange={(e) => setCarType(e.target.value)}
+                required
+                disabled={!carCapacity}
+                className={`${inputClass} w-full rounded-md px-3 focus:outline-none`}
+              >
+                <option value="">{t("registerForm.placeholders.truckType")}</option>
+                {truckTypeOptions.map((option) => (
+                  <option key={`${carCapacity}-${option.value}`} value={option.value}>
+                    {isArabic ? option.ar : option.en}
+                  </option>
+                ))}
+              </select>
             </div>
           </>
         )}

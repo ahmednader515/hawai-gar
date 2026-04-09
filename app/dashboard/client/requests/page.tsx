@@ -65,6 +65,7 @@ export default async function ClientRequestsPage() {
     priceSar: r.priceSar,
     estimatedPriceSar: r.estimatedPriceSar,
     adminPriceChanged: r.adminPriceChanged,
+    adminPriceChangeNotice: r.adminPriceChangeNotice,
     shipmentType: r.shipmentType,
     pickupDate: r.pickupDate,
     notes: r.notes,

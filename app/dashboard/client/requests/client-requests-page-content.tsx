@@ -27,6 +27,7 @@ export type SerializedShipmentRequest = {
   priceSar: number | null;
   estimatedPriceSar: number | null;
   adminPriceChanged: boolean;
+  adminPriceChangeNotice: string | null;
   shipmentType: string | null;
   pickupDate: string | null;
   notes: string | null;
@@ -306,6 +307,7 @@ export function ClientRequestsPageContent({
                             priceSar={r.priceSar}
                             locale={locale}
                             compact
+                            adminNotice={r.adminPriceChangeNotice}
                           />
                         </div>
                       )}
