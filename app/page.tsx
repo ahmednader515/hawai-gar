@@ -123,8 +123,8 @@ export default async function Home() {
       <footer className="border-t py-6 sm:py-8 bg-muted/20">
         <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <Image src="/logo.png" alt="hawai GAR" width={32} height={32} className="object-contain" />
-            <p className="font-semibold text-sm sm:text-base">hawai GAR</p>
+            <Image src="/logo.png" alt="hawai Logisti" width={32} height={32} className="object-contain" />
+            <p className="font-semibold text-sm sm:text-base">hawai Logisti</p>
           </div>
           <nav className="flex gap-4 sm:gap-6 text-sm text-muted-foreground">
             {session?.user ? (

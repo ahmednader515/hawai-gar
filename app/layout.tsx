@@ -10,7 +10,7 @@ import arMessages from "@/messages/ar.json";
 import enMessages from "@/messages/en.json";
 
 export const metadata: Metadata = {
-  title: "hawai GAR",
+  title: "hawai Logisti",
   description: "ربط شركات الشحن (بين مواني ومدن المملكة والخليج) بشركات النقل في المملكة العربية السعودية",
 };
 

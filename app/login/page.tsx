@@ -38,7 +38,7 @@ export default async function LoginPage() {
         <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 relative">
           <LoginToolbar />
           <Link href="/" className="mb-8 sm:mb-10">
-            <Image src="/logo.png" alt="hawai GAR" width={56} height={56} className="object-contain" />
+            <Image src="/logo.png" alt="hawai Logisti" width={56} height={56} className="object-contain" />
           </Link>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground text-center mb-2">{t("loginPage.welcome")}</h1>
           <div className="w-20 h-1 bg-primary rounded-full mb-8" />

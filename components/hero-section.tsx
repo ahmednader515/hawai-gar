@@ -652,12 +652,12 @@ export function HeroSection({
             <Link href="/" className="flex shrink-0 items-center gap-1.5 sm:gap-2">
               <Image
                 src="/logo.png"
-                alt="hawai GAR"
+                alt="hawai Logisti"
                 width={48}
                 height={48}
                 className="object-contain h-9 w-9 sm:h-12 sm:w-12"
               />
-              <span className="text-xl font-bold text-white hidden sm:inline">hawai GAR</span>
+              <span className="text-xl font-bold text-white hidden sm:inline">hawai Logisti</span>
             </Link>
             <nav
               className="hidden min-w-0 md:flex md:flex-wrap md:items-center md:gap-x-4 md:gap-y-1 lg:gap-x-5 text-sm text-white/90"

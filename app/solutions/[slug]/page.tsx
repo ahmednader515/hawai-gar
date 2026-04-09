@@ -18,13 +18,13 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   if (!isSolutionSlug(slug)) {
-    return { title: "hawai GAR" };
+    return { title: "hawai Logisti" };
   }
   const t = await getTranslations();
   const title = t(`solutions.${slug}`);
   const description = t(`solutions.pages.${slug}.metaDescription`);
   return {
-    title: `${title} | hawai GAR`,
+    title: `${title} | hawai Logisti`,
     description,
   };
 }
