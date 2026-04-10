@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
+import { allocateShipmentRequestId } from "@/lib/shipment-request-id";
+import { computeShipmentEstimateSar, getShipmentPricingSettings } from "@/lib/shipment-pricing";
 
 function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
   const R = 6371; // km
@@ -71,10 +73,15 @@ export async function POST(req: Request) {
     const hasCoords =
       Number.isFinite(fl) && Number.isFinite(fg) && Number.isFinite(tl) && Number.isFinite(tg);
     const distanceKm = hasCoords ? haversineKm({ lat: fl, lng: fg }, { lat: tl, lng: tg }) : null;
-    const priceSar = distanceKm != null ? distanceKm * 500 * 1.15 : null;
+    const pricing = await getShipmentPricingSettings();
+    const priceSar =
+      distanceKm != null ? computeShipmentEstimateSar(distanceKm, pricing) : null;
+
+    const requestId = await allocateShipmentRequestId();
 
     const created = await prisma.shipmentRequest.create({
       data: {
+        id: requestId,
         fromText: String(from).trim(),
         toText: String(to).trim(),
         companyId: session.user.id,

@@ -192,7 +192,8 @@ model SiteSetting {
 }
 
 model ShipmentRequest {
-  id              String   @id @default(cuid())
+  /// Assigned at create (e.g. A001); not a DB default.
+  id              String   @id
   fromText        String
   toText          String
   companyId       String?

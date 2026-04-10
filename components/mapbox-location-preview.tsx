@@ -3,6 +3,11 @@
 import { useEffect, useMemo, useRef } from "react";
 import mapboxgl from "mapbox-gl";
 import { useI18n } from "@/components/providers/i18n-provider";
+import {
+  addDrivingRouteLayer,
+  getDrivingRouteOrStraight,
+  fitMapToCoordinates,
+} from "@/lib/mapbox-driving-route";
 
 type LatLng = { lat: number; lng: number };
 
@@ -21,6 +26,7 @@ export function MapboxLocationPreview({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const routeAbortRef = useRef<AbortController | null>(null);
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN ?? "";
 
@@ -80,8 +86,26 @@ export function MapboxLocationPreview({
     };
 
     map.on("load", () => {
-      addMarkers();
-      fit();
+      routeAbortRef.current?.abort();
+      routeAbortRef.current = new AbortController();
+      const signal = routeAbortRef.current.signal;
+
+      void (async () => {
+        if (from && to) {
+          try {
+            const line = await getDrivingRouteOrStraight(from, to, token, signal);
+            if (signal.aborted || mapRef.current !== map) return;
+            addDrivingRouteLayer(map, line);
+            fitMapToCoordinates(map, line.coordinates);
+          } catch {
+            /* aborted or torn down */
+          }
+        }
+        addMarkers();
+        if (!(from && to)) {
+          fit();
+        }
+      })();
     });
 
     if (interactive) {
@@ -105,6 +129,8 @@ export function MapboxLocationPreview({
     }
 
     return () => {
+      routeAbortRef.current?.abort();
+      routeAbortRef.current = null;
       markersRef.current.forEach((m) => m.remove());
       markersRef.current = [];
       map.remove();

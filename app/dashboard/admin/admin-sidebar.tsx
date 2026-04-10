@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
-import { ClipboardList, Newspaper, BookOpen, Mail } from "lucide-react";
+import { ClipboardList, Newspaper, BookOpen, Mail, Banknote } from "lucide-react";
 import { useI18n } from "@/components/providers/i18n-provider";
 
 const LINK_DEFS = [
   { href: "/dashboard/admin", labelKey: "nav.admin.orders", shortKey: "nav.admin.ordersShort", icon: ClipboardList },
+  { href: "/dashboard/admin/pricing", labelKey: "nav.admin.pricing", shortKey: "nav.admin.pricingShort", icon: Banknote },
   { href: "/dashboard/admin/news", labelKey: "nav.admin.news", shortKey: "nav.admin.newsShort", icon: Newspaper },
   { href: "/dashboard/admin/advisories", labelKey: "nav.admin.advisories", shortKey: "nav.admin.advisoriesShort", icon: BookOpen },
   { href: "/dashboard/admin/contact", labelKey: "nav.admin.contact", shortKey: "nav.admin.contactShort", icon: Mail },
@@ -25,6 +26,9 @@ function linkActive(pathname: string, href: string) {
   if (href === "/dashboard/admin") return isAdminOrdersActive(pathname);
   if (href === "/dashboard/admin/contact") {
     return pathname === "/dashboard/admin/contact";
+  }
+  if (href === "/dashboard/admin/pricing") {
+    return pathname === "/dashboard/admin/pricing";
   }
   return pathname === href || pathname.startsWith(href + "/");
 }

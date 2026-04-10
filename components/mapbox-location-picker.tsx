@@ -4,6 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import MapboxGeocoder from "@mapbox/mapbox-gl-geocoder";
 import { useI18n } from "@/components/providers/i18n-provider";
+import {
+  addDrivingRouteLayer,
+  getDrivingRouteOrStraight,
+  removeDrivingRouteLayer,
+  fitMapToCoordinates,
+} from "@/lib/mapbox-driving-route";
 
 export type PickedLocation = {
   address: string;
@@ -42,6 +48,7 @@ export function MapboxLocationPicker({
   const geocoderToHostRef = useRef<HTMLDivElement | null>(null);
   const markerFromRef = useRef<mapboxgl.Marker | null>(null);
   const markerToRef = useRef<mapboxgl.Marker | null>(null);
+  const routeAbortRef = useRef<AbortController | null>(null);
   const activeRef = useRef<"from" | "to">("from");
 
   const [active, setActive] = useState<"from" | "to">("from");
@@ -178,6 +185,43 @@ export function MapboxLocationPicker({
       markerToRef.current = null;
     }
   }, [valueFrom, valueTo]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !token) return;
+
+    const applyRoute = () => {
+      routeAbortRef.current?.abort();
+      routeAbortRef.current = new AbortController();
+      const signal = routeAbortRef.current.signal;
+
+      void (async () => {
+        if (!isValidPicked(valueFrom) || !isValidPicked(valueTo)) {
+          removeDrivingRouteLayer(map);
+          return;
+        }
+
+        try {
+          const line = await getDrivingRouteOrStraight(valueFrom, valueTo, token, signal);
+          if (signal.aborted || mapRef.current !== map) return;
+          if (!map.loaded()) return;
+          addDrivingRouteLayer(map, line);
+          fitMapToCoordinates(map, line.coordinates);
+        } catch {
+          /* aborted */
+        }
+      })();
+    };
+
+    if (map.loaded()) applyRoute();
+    else map.once("load", applyRoute);
+
+    return () => {
+      routeAbortRef.current?.abort();
+      const m = mapRef.current;
+      if (m) removeDrivingRouteLayer(m);
+    };
+  }, [valueFrom, valueTo, token]);
 
   if (!token) {
     return (

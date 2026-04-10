@@ -14,6 +14,7 @@ import type { PickedLocation } from "@/components/mapbox-location-picker";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { CopyableRequestId } from "@/components/copyable-request-id";
 import { TRUCK_SIZE_OPTIONS, TRUCK_TYPE_OPTIONS_BY_SIZE, type TruckOption } from "@/lib/truck-options";
+import { DEFAULT_MULTIPLIER, DEFAULT_SAR_PER_KM } from "@/lib/shipment-pricing-constants";
 
 /** Mapbox + geocoder are large; load only when the shipper panel or track map is shown */
 const MapboxLocationPicker = dynamic(
@@ -143,6 +144,42 @@ export function HeroSection({
   const [codeVerifyLoading, setCodeVerifyLoading] = useState(false);
   const [otpResendLoading, setOtpResendLoading] = useState(false);
 
+  const [pricingSettings, setPricingSettings] = useState({
+    sarPerKm: DEFAULT_SAR_PER_KM,
+    multiplier: DEFAULT_MULTIPLIER,
+    detailsNote: null as string | null,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/shipment-pricing");
+        const data = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        setPricingSettings({
+          sarPerKm:
+            typeof data.sarPerKm === "number" && Number.isFinite(data.sarPerKm)
+              ? data.sarPerKm
+              : DEFAULT_SAR_PER_KM,
+          multiplier:
+            typeof data.multiplier === "number" && Number.isFinite(data.multiplier)
+              ? data.multiplier
+              : DEFAULT_MULTIPLIER,
+          detailsNote:
+            typeof data.detailsNote === "string" && data.detailsNote.trim()
+              ? data.detailsNote.trim()
+              : null,
+        });
+      } catch {
+        /* keep defaults */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   useEffect(() => {
     if (!effectiveIsLoggedIn) return;
     if (typeof window === "undefined") return;
@@ -223,8 +260,8 @@ export function HeroSection({
 
   const priceSar = useMemo(() => {
     if (distanceKm == null) return null;
-    return distanceKm * 500 * 1.15;
-  }, [distanceKm]);
+    return distanceKm * pricingSettings.sarPerKm * pricingSettings.multiplier;
+  }, [distanceKm, pricingSettings.sarPerKm, pricingSettings.multiplier]);
 
   const priceLabel = useMemo(() => {
     if (priceSar == null) return "—";
@@ -896,6 +933,11 @@ export function HeroSection({
                     />
                     {priceInWords ? (
                       <p className="text-xs text-muted-foreground leading-snug">{priceInWords}</p>
+                    ) : null}
+                    {pricingSettings.detailsNote && distanceKm != null ? (
+                      <p className="text-xs text-muted-foreground leading-snug whitespace-pre-wrap border-t border-border/60 pt-2 mt-2">
+                        {pricingSettings.detailsNote}
+                      </p>
                     ) : null}
                   </div>
                   <div className="space-y-1.5 sm:col-span-2">
