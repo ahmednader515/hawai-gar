@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -92,6 +93,48 @@ function matchesStatusFilter(row: AdminShipmentRow, filter: AdminShipmentStatusF
     return row.status === "CARRIER_ACCEPTED" || row.status === "CARRIER_REFUSED";
   }
   return row.status === filter;
+}
+
+function AdminShipmentDeleteButton({ requestId }: { requestId: string }) {
+  const { t } = useI18n();
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleDelete() {
+    if (!confirm(t("dashboard.admin.deleteShipmentRequestConfirm"))) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/shipment-requests/${requestId}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError((data.error as string) ?? t("dashboard.admin.deleteShipmentRequestError"));
+        return;
+      }
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex w-full flex-col items-stretch gap-1 sm:items-end">
+      <Button
+        type="button"
+        variant="destructive"
+        size="sm"
+        className="min-h-[48px] w-full rounded-xl px-5 py-3 text-sm font-semibold sm:min-h-0 sm:w-auto"
+        onClick={() => void handleDelete()}
+        disabled={busy}
+      >
+        {busy ? t("dashboard.admin.deleteShipmentRequestDeleting") : t("dashboard.admin.deleteShipmentRequest")}
+      </Button>
+      {error ? (
+        <p className="text-end text-xs text-red-700 sm:max-w-[20rem]">{error}</p>
+      ) : null}
+    </div>
+  );
 }
 
 export function AdminShipmentList({ rows }: { rows: AdminShipmentRow[] }) {
@@ -199,9 +242,12 @@ export function AdminShipmentList({ rows }: { rows: AdminShipmentRow[] }) {
                         {statusText}
                         {when ? ` — ${when}` : ""}
                       </span>
-                      <Link href={detailsHref} className={`${detailsBtnClass} sm:w-auto`}>
-                        {t("dashboard.admin.viewDetails")}
-                      </Link>
+                      <div className="flex w-full min-w-0 flex-col items-end gap-2 sm:w-auto">
+                        <Link href={detailsHref} className={`${detailsBtnClass} sm:w-auto`}>
+                          {t("dashboard.admin.viewDetails")}
+                        </Link>
+                        <AdminShipmentDeleteButton requestId={o.id} />
+                      </div>
                     </div>
                     <div className="sm:hidden">
                       <span
@@ -269,10 +315,11 @@ export function AdminShipmentList({ rows }: { rows: AdminShipmentRow[] }) {
                       </div>
                     ) : null}
                   </dl>
-                  <div className="mt-4 border-t border-border pt-4 sm:hidden">
+                  <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 sm:hidden">
                     <Link href={detailsHref} className={detailsBtnClass}>
                       {t("dashboard.admin.viewDetails")}
                     </Link>
+                    <AdminShipmentDeleteButton requestId={o.id} />
                   </div>
                 </CardContent>
               </Card>

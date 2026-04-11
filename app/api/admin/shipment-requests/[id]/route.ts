@@ -101,3 +101,30 @@ export async function PATCH(
   }
 }
 
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "ADMIN") {
+    return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+  }
+
+  const { id } = await params;
+
+  try {
+    const existing = await prisma.shipmentRequest.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: "الطلب غير موجود" }, { status: 404 });
+    }
+
+    await prisma.shipmentRequest.delete({ where: { id } });
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ error: "حدث خطأ" }, { status: 500 });
+  }
+}
