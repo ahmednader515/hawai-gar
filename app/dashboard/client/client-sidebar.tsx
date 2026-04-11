@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
-import { Inbox, ClipboardList } from "lucide-react";
+import { Inbox, ClipboardList, User } from "lucide-react";
 import { useI18n } from "@/components/providers/i18n-provider";
 
 const LINK_DEFS = [
   { href: "/dashboard/client/requests", labelKey: "nav.client.incoming", shortKey: "nav.client.incomingShort", icon: Inbox },
   { href: "/dashboard/client/orders", labelKey: "nav.client.myOrders", shortKey: "nav.client.myOrdersShort", icon: ClipboardList },
+  { href: "/dashboard/client/account", labelKey: "nav.client.account", shortKey: "nav.client.accountShort", icon: User },
 ] as const;
 
 export function ClientSidebar() {
@@ -35,7 +36,9 @@ export function ClientSidebar() {
                 pathname === "/dashboard/client/requests" ||
                 pathname.startsWith("/dashboard/client/requests/") ||
                 pathname.startsWith("/dashboard/client/shipment-requests")
-              : pathname === link.href || pathname.startsWith(link.href + "/");
+              : link.href === "/dashboard/client/account"
+                ? pathname === "/dashboard/client/account"
+                : pathname === link.href || pathname.startsWith(link.href + "/");
           const Icon = link.icon;
           return (
             <Link
@@ -58,7 +61,7 @@ export function ClientSidebar() {
         className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-card/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.35)]"
         aria-label={t("common.mainNavigation")}
       >
-        <div className="mx-auto grid max-w-lg grid-cols-2 gap-0 px-2 pt-1">
+        <div className="mx-auto grid max-w-lg grid-cols-3 gap-0 px-1 pt-1">
           {links.map((link) => {
             const isActive =
               link.href === "/dashboard/client/requests"
@@ -66,7 +69,9 @@ export function ClientSidebar() {
                   pathname === "/dashboard/client/requests" ||
                   pathname.startsWith("/dashboard/client/requests/") ||
                   pathname.startsWith("/dashboard/client/shipment-requests")
-                : pathname === link.href || pathname.startsWith(link.href + "/");
+                : link.href === "/dashboard/client/account"
+                  ? pathname === "/dashboard/client/account"
+                  : pathname === link.href || pathname.startsWith(link.href + "/");
             const Icon = link.icon;
             return (
               <Link

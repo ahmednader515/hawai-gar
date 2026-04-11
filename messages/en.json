@@ -48,13 +48,17 @@
       "newsShort": "News",
       "advisoriesShort": "Tips",
       "contactShort": "Contact",
-      "pricingShort": "Price"
+      "pricingShort": "Price",
+      "account": "Account",
+      "accountShort": "Account"
     },
     "client": {
       "incoming": "Incoming requests",
       "myOrders": "My orders",
       "incomingShort": "Inbox",
-      "myOrdersShort": "Orders"
+      "myOrdersShort": "Orders",
+      "account": "Account",
+      "accountShort": "Account"
     },
     "company": {
       "myOrders": "My orders",
@@ -358,6 +362,8 @@
       "pricingSaveSuccess": "Pricing saved.",
       "pricingSaveError": "Could not save pricing.",
       "pricingGenericError": "Something went wrong while saving.",
+      "accountTitle": "Account settings",
+      "accountIntro": "Update your profile and sign-in email or password.",
       "shipmentDetailBack": "Orders",
       "shipmentProgressAriaLabel": "Shipment request progress",
       "shipmentProgressStepCarrier": "Awaiting carrier decision",
@@ -472,7 +478,38 @@
       "accept": "Accept",
       "refuse": "Decline",
       "working": "…",
-      "mapLegend": "Location on map"
+      "mapLegend": "Location on map",
+      "accountTitle": "Account settings",
+      "accountIntro": "Update your carrier profile, contact details, and sign-in email or password."
+    }
+  },
+  "accountForm": {
+    "sectionProfile": "Profile",
+    "sectionSecurity": "Email & password",
+    "displayName": "Display name",
+    "fullName": "Full name",
+    "email": "Email",
+    "phone": "Phone",
+    "nationalId": "National ID (optional)",
+    "licenseNumber": "License number (optional)",
+    "carPlate": "Plate number",
+    "carType": "Vehicle type",
+    "carCapacity": "Vehicle size / capacity",
+    "currentPassword": "Current password",
+    "newPassword": "New password (optional)",
+    "confirmPassword": "Confirm new password",
+    "passwordHint": "Enter your current password only when you change your email or set a new password.",
+    "save": "Save changes",
+    "saving": "Saving…",
+    "success": "Your account was updated.",
+    "errors": {
+      "PASSWORD_REQUIRED": "Enter your current password to change your email or password.",
+      "INVALID_PASSWORD": "Current password is incorrect.",
+      "EMAIL_IN_USE": "This email is already registered.",
+      "WEAK_PASSWORD": "New password must be at least 8 characters.",
+      "MISMATCH": "New passwords do not match.",
+      "VALIDATION": "Please fill in all required fields.",
+      "GENERIC": "Could not save changes. Please try again."
     }
   },
   "hero": {

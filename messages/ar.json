@@ -48,13 +48,17 @@
       "newsShort": "الأخبار",
       "advisoriesShort": "إرشادات",
       "contactShort": "تواصل",
-      "pricingShort": "سعر"
+      "pricingShort": "سعر",
+      "account": "الحساب",
+      "accountShort": "حساب"
     },
     "client": {
       "incoming": "الطلبات الواردة",
       "myOrders": "طلباتي",
       "incomingShort": "واردة",
-      "myOrdersShort": "طلباتي"
+      "myOrdersShort": "طلباتي",
+      "account": "الحساب",
+      "accountShort": "حساب"
     },
     "company": {
       "myOrders": "طلباتي",
@@ -358,6 +362,8 @@
       "pricingSaveSuccess": "تم حفظ التسعير.",
       "pricingSaveError": "تعذر حفظ التسعير.",
       "pricingGenericError": "حدث خطأ أثناء الحفظ.",
+      "accountTitle": "إعدادات الحساب",
+      "accountIntro": "حدّث اسم العرض وبريدك أو كلمة المرور.",
       "shipmentDetailBack": "الطلبات",
       "shipmentProgressAriaLabel": "تقدّم طلب الشحن",
       "shipmentProgressStepCarrier": "بانتظار قرار شركة الشحن",
@@ -472,7 +478,38 @@
       "accept": "قبول",
       "refuse": "رفض",
       "working": "جاري...",
-      "mapLegend": "الموقع على الخريطة"
+      "mapLegend": "الموقع على الخريطة",
+      "accountTitle": "إعدادات الحساب",
+      "accountIntro": "حدّث بيانات شركة النقل والتواصل وبريدك أو كلمة المرور."
+    }
+  },
+  "accountForm": {
+    "sectionProfile": "الملف",
+    "sectionSecurity": "البريد وكلمة المرور",
+    "displayName": "الاسم الظاهر",
+    "fullName": "الاسم الكامل",
+    "email": "البريد الإلكتروني",
+    "phone": "الهاتف",
+    "nationalId": "الهوية الوطنية (اختياري)",
+    "licenseNumber": "رقم الرخصة (اختياري)",
+    "carPlate": "رقم اللوحة",
+    "carType": "نوع المركبة",
+    "carCapacity": "حجم الشاحنة / السعة",
+    "currentPassword": "كلمة المرور الحالية",
+    "newPassword": "كلمة مرور جديدة (اختياري)",
+    "confirmPassword": "تأكيد كلمة المرور الجديدة",
+    "passwordHint": "أدخل كلمة المرور الحالية فقط عند تغيير البريد أو تعيين كلمة مرور جديدة.",
+    "save": "حفظ التغييرات",
+    "saving": "جاري الحفظ…",
+    "success": "تم تحديث الحساب.",
+    "errors": {
+      "PASSWORD_REQUIRED": "أدخل كلمة المرور الحالية لتغيير البريد أو كلمة المرور.",
+      "INVALID_PASSWORD": "كلمة المرور الحالية غير صحيحة.",
+      "EMAIL_IN_USE": "هذا البريد مسجّل مسبقاً.",
+      "WEAK_PASSWORD": "يجب أن تكون كلمة المرور الجديدة 8 أحرف على الأقل.",
+      "MISMATCH": "كلمتا المرور الجديدتان غير متطابقتين.",
+      "VALIDATION": "يرجى تعبئة جميع الحقول المطلوبة.",
+      "GENERIC": "تعذّر حفظ التغييرات. حاول مرة أخرى."
     }
   },
   "hero": {

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
-import { ClipboardList, Newspaper, BookOpen, Mail, Banknote } from "lucide-react";
+import { ClipboardList, Newspaper, BookOpen, Mail, Banknote, User } from "lucide-react";
 import { useI18n } from "@/components/providers/i18n-provider";
 
 const LINK_DEFS = [
@@ -12,6 +12,7 @@ const LINK_DEFS = [
   { href: "/dashboard/admin/news", labelKey: "nav.admin.news", shortKey: "nav.admin.newsShort", icon: Newspaper },
   { href: "/dashboard/admin/advisories", labelKey: "nav.admin.advisories", shortKey: "nav.admin.advisoriesShort", icon: BookOpen },
   { href: "/dashboard/admin/contact", labelKey: "nav.admin.contact", shortKey: "nav.admin.contactShort", icon: Mail },
+  { href: "/dashboard/admin/account", labelKey: "nav.admin.account", shortKey: "nav.admin.accountShort", icon: User },
 ] as const;
 
 function isAdminOrdersActive(pathname: string) {
@@ -29,6 +30,9 @@ function linkActive(pathname: string, href: string) {
   }
   if (href === "/dashboard/admin/pricing") {
     return pathname === "/dashboard/admin/pricing";
+  }
+  if (href === "/dashboard/admin/account") {
+    return pathname === "/dashboard/admin/account";
   }
   return pathname === href || pathname.startsWith(href + "/");
 }
