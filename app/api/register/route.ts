@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import { prisma } from "@/lib/db";
 import { UserRole } from "@prisma/client";
 import { normalizeEmailKey } from "@/lib/email-verification";
+import { parseTagList } from "@/lib/catalog-tags";
 
 export async function POST(req: Request) {
   try {
@@ -19,11 +20,12 @@ export async function POST(req: Request) {
       address,
       city,
       fullName,
-      nationalId,
-      licenseNumber,
-      carPlate,
       carType,
       carCapacity,
+      listingCompanyName,
+      representativeName,
+      truckTypesCatalog,
+      serviceDestinations,
       guestShipmentRegistration,
       registrationPreVerified,
     } = body;
@@ -135,11 +137,29 @@ export async function POST(req: Request) {
     }
 
     if (r === UserRole.DRIVER) {
-      if (!fullName || !phone || !carPlate || !carType || !carCapacity) {
+      const listing = listingCompanyName != null ? String(listingCompanyName).trim() : "";
+      const truckCat = truckTypesCatalog != null ? String(truckTypesCatalog).trim() : "";
+      const svcDest = serviceDestinations != null ? String(serviceDestinations).trim() : "";
+      const repName =
+        representativeName != null && String(representativeName).trim()
+          ? String(representativeName).trim()
+          : String(fullName ?? "").trim();
+
+      const truckTagCount = parseTagList(truckCat).length;
+      const destTagCount = parseTagList(svcDest).length;
+      if (
+        !fullName ||
+        !phone ||
+        !carType ||
+        !carCapacity ||
+        !listing ||
+        truckTagCount === 0 ||
+        destTagCount === 0
+      ) {
         return NextResponse.json(
           {
             error:
-              "الاسم الكامل والهاتف ورقم اللوحة ونوع الشاحنة وحجم الشاحنة مطلوبة لإنشاء حساب شركة نقل",
+              "اسم المنشأة الظاهر في الدليل والهاتف ونوع الشاحنة وحجم الشاحنة وأنواع الشاحنات والاتجاهات مطلوبة لإنشاء حساب شركة نقل",
           },
           { status: 400 }
         );
@@ -175,14 +195,18 @@ export async function POST(req: Request) {
 
           await tx.driverProfile.create({
             data: {
-              userId: createdUser.id,
               fullName: String(fullName),
-              nationalId: nationalId ? String(nationalId) : null,
+              nationalId: null,
               phone: String(phone),
-              licenseNumber: licenseNumber ? String(licenseNumber) : null,
-              carPlate: String(carPlate),
+              licenseNumber: null,
+              carPlate: null,
               carType: String(carType),
               carCapacity: String(carCapacity),
+              listingCompanyName: listing,
+              representativeName: repName,
+              truckTypesCatalog: truckCat,
+              serviceDestinations: svcDest,
+              user: { connect: { id: createdUser.id } },
             },
           });
 

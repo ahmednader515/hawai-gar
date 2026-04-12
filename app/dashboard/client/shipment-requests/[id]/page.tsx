@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { auth } from "@/auth";
+import { getCarrierAckVariant } from "@/lib/carrier-ack-variant";
+import { shipmentRequestVisibleToDriverWhere } from "@/lib/shipment-request-driver-visibility";
 import { ArrowLeft, Calendar, MapPinned, Package, Route, StickyNote } from "lucide-react";
 import { getLocale, getTranslations } from "@/lib/i18n/server";
 import { prisma } from "@/lib/db";
@@ -46,15 +49,24 @@ export default async function ClientShipmentRequestDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const session = await auth();
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
   const t = await getTranslations();
   const locale = await getLocale();
   const dateLocale = locale === "ar" ? "ar-SA" : "en-GB";
 
-  const r = await prisma.shipmentRequest.findUnique({
-    where: { id },
+  const r = await prisma.shipmentRequest.findFirst({
+    where: {
+      id,
+      AND: [shipmentRequestVisibleToDriverWhere(session.user.id)],
+    },
     select: {
       id: true,
       status: true,
+      carrierId: true,
+      carrierSelfSubmittedDecision: true,
       createdAt: true,
       fromText: true,
       toText: true,
@@ -111,6 +123,13 @@ export default async function ClientShipmentRequestDetailPage({
     r.adminPriceChanged &&
     typeof r.estimatedPriceSar === "number" &&
     typeof r.priceSar === "number";
+
+  const carrierAckVariant = getCarrierAckVariant(
+    r.carrierId,
+    session.user.id,
+    r.status,
+    r.carrierSelfSubmittedDecision,
+  );
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-8 pb-12">
@@ -314,7 +333,13 @@ export default async function ClientShipmentRequestDetailPage({
             )}
 
             <div className="border-t border-border pt-6">
-              <ShipmentRequestActions id={r.id} status={r.status} />
+              <ShipmentRequestActions
+                id={r.id}
+                status={r.status}
+                carrierAckVariant={carrierAckVariant}
+                carrierId={r.carrierId}
+                currentUserId={session.user.id}
+              />
             </div>
           </div>
         </CardContent>

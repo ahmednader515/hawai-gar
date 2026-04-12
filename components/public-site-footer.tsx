@@ -11,8 +11,8 @@ export function PublicSiteFooter() {
     <footer className="border-t py-8 bg-muted/20 mt-auto">
       <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          <Image src="/logo.png" alt="hawai Logisti" width={32} height={32} className="object-contain" />
-          <p className="font-semibold">hawai Logisti</p>
+          <Image src="/logo.png" alt="Hawai Logisti" width={32} height={32} className="object-contain" />
+          <p className="font-semibold">Hawai Logisti</p>
         </div>
         <nav className="flex gap-6 text-sm text-muted-foreground">
           <Link href="/login" className="hover:underline">

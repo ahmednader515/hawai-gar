@@ -121,8 +121,8 @@ export function DashboardNav({
         <div className="container mx-auto flex h-14 items-center justify-between px-4 gap-4 w-full max-w-full min-w-0">
           <nav className="flex items-center gap-4 md:gap-6 min-w-0">
             <Link href="/" className="flex items-center gap-2 font-semibold shrink-0">
-              <Image src="/logo.png" alt="hawai Logisti" width={28} height={28} className="object-contain" />
-              <span className="hidden sm:inline">hawai Logisti</span>
+              <Image src="/logo.png" alt="Hawai Logisti" width={28} height={28} className="object-contain" />
+              <span className="hidden sm:inline">Hawai Logisti</span>
             </Link>
             {hasNavLinks ? (
               <div className="hidden md:flex items-center gap-4 md:gap-6">

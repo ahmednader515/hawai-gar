@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
-import { ClipboardList, Newspaper, BookOpen, Mail, Banknote, User } from "lucide-react";
+import { ClipboardList, Newspaper, BookOpen, Mail, Banknote, User, Users } from "lucide-react";
 import { useI18n } from "@/components/providers/i18n-provider";
 
 const LINK_DEFS = [
   { href: "/dashboard/admin", labelKey: "nav.admin.orders", shortKey: "nav.admin.ordersShort", icon: ClipboardList },
+  { href: "/dashboard/admin/clients", labelKey: "nav.admin.clients", shortKey: "nav.admin.clientsShort", icon: Users },
   { href: "/dashboard/admin/pricing", labelKey: "nav.admin.pricing", shortKey: "nav.admin.pricingShort", icon: Banknote },
   { href: "/dashboard/admin/news", labelKey: "nav.admin.news", shortKey: "nav.admin.newsShort", icon: Newspaper },
   { href: "/dashboard/admin/advisories", labelKey: "nav.admin.advisories", shortKey: "nav.admin.advisoriesShort", icon: BookOpen },
@@ -33,6 +34,9 @@ function linkActive(pathname: string, href: string) {
   }
   if (href === "/dashboard/admin/account") {
     return pathname === "/dashboard/admin/account";
+  }
+  if (href === "/dashboard/admin/clients") {
+    return pathname === "/dashboard/admin/clients";
   }
   return pathname === href || pathname.startsWith(href + "/");
 }

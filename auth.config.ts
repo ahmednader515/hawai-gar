@@ -24,6 +24,7 @@ export const authConfig: NextAuthConfig = {
             user.passwordHash
           );
           if (!ok) return null;
+          if (user.blacklistedAt) return null;
           return {
             id: user.id,
             email: user.email,

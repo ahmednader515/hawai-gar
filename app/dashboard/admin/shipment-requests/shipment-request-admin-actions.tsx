@@ -7,7 +7,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/components/providers/i18n-provider";
+import {
+  allowsAdminCarrierReassign,
+  shouldClearWorkflowOnCarrierChange,
+} from "@/lib/admin-carrier-reassign";
 import { AdminInvoiceLinkFields } from "./invoice-link-fields";
+
+export type CompatibleAssigneeRow = {
+  source: "platformDriver" | "directoryCompany";
+  id: string;
+  company_name: string | null;
+  representative_name: string | null;
+  phone: string | null;
+  email: string | null;
+  truck_types: string | null;
+  destinations: string | null;
+  score: number;
+};
+
+function assigneeKey(row: CompatibleAssigneeRow): string {
+  return row.source === "platformDriver" ? `platformDriver:${row.id}` : `directory:${row.id}`;
+}
 
 export function ShipmentRequestAdminActions({
   id,
@@ -17,7 +37,9 @@ export function ShipmentRequestAdminActions({
   invoiceLink: invoiceLinkProp,
   invoiceImageUrl,
   assignedShipmentCompany,
-  compatibleShipmentCompanies,
+  assignedPlatformDriverName,
+  initialShortlistKeys,
+  compatibleAssignees,
 }: {
   id: string;
   status: string;
@@ -34,22 +56,24 @@ export function ShipmentRequestAdminActions({
     truck_types: string | null;
     destinations: string | null;
   } | null;
-  compatibleShipmentCompanies: Array<{
-    id: string;
-    company_name: string | null;
-    representative_name: string | null;
-    phone: string | null;
-    email: string | null;
-    truck_types: string | null;
-    destinations: string | null;
-    score: number;
-  }>;
+  /** When admin assigned a registered DRIVER (no directory row). */
+  assignedPlatformDriverName: string | null;
+  /** Saved shortlist (platform + directory keys). */
+  initialShortlistKeys: string[];
+  compatibleAssignees: CompatibleAssigneeRow[];
 }) {
   const { t } = useI18n();
   const router = useRouter();
-  const [loading, setLoading] = useState<"approve" | "reject" | "invoice" | "paymentApprove" | "paymentReject" | null>(
-    null,
-  );
+  const [loading, setLoading] = useState<
+    | "approve"
+    | "reject"
+    | "invoice"
+    | "paymentApprove"
+    | "paymentReject"
+    | "assignCarrier"
+    | "shortlist"
+    | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
 
   const [editedPriceSar, setEditedPriceSar] = useState<string>(() =>
@@ -57,15 +81,14 @@ export function ShipmentRequestAdminActions({
   );
   const [priceChangeNotice, setPriceChangeNotice] = useState("");
   const [invoiceLinkInput, setInvoiceLinkInput] = useState(() => invoiceLinkProp ?? "");
-  const [selectedShipmentCompanyId, setSelectedShipmentCompanyId] = useState<string>(
-    assignedShipmentCompany?.id ?? "",
-  );
+  const [shortlistKeys, setShortlistKeys] = useState<string[]>(() => [...initialShortlistKeys]);
   const [companySearch, setCompanySearch] = useState("");
 
   const a = "dashboard.admin";
 
   const canCarrierDecide = status === "CARRIER_ACCEPTED" || status === "CARRIER_REFUSED";
-  const isPendingCarrier = status === "PENDING_CARRIER";
+  const canAssignCarrier = allowsAdminCarrierReassign(status);
+  const showReassignWorkflowWarning = shouldClearWorkflowOnCarrierChange(status);
 
   const canEditInvoiceLink =
     canCarrierDecide ||
@@ -78,8 +101,18 @@ export function ShipmentRequestAdminActions({
   }, [invoiceLinkProp]);
 
   useEffect(() => {
-    setSelectedShipmentCompanyId(assignedShipmentCompany?.id ?? "");
-  }, [assignedShipmentCompany?.id]);
+    setShortlistKeys([...initialShortlistKeys]);
+  }, [initialShortlistKeys]);
+
+  function toggleShortlistKey(key: string) {
+    setShortlistKeys((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+    );
+  }
+
+  function shortlistKeySelected(key: string): boolean {
+    return shortlistKeys.includes(key);
+  }
 
   const parsedFinalPriceSar = useMemo(() => {
     const raw = editedPriceSar.trim();
@@ -93,18 +126,52 @@ export function ShipmentRequestAdminActions({
     parsedFinalPriceSar != null &&
     Math.round(estimatedPriceSar) !== parsedFinalPriceSar;
 
-  async function assignShipmentCompany() {
-    if (!selectedShipmentCompanyId) {
-      setError(t(`${a}.shipmentActionsAssignRequired`));
+  async function assignImmediateCarrier() {
+    if (shortlistKeys.length !== 1) {
+      setError(t(`${a}.shipmentActionsAssignImmediateOneOnly`));
       return;
     }
-    setLoading("approve");
+    const selectedAssigneeKey = shortlistKeys[0];
+    setLoading("assignCarrier");
     setError(null);
     try {
+      const body =
+        selectedAssigneeKey.startsWith("platformDriver:")
+          ? { carrierUserId: selectedAssigneeKey.slice("platformDriver:".length) }
+          : { shipmentCompanyId: selectedAssigneeKey.slice("directory:".length) };
       const res = await fetch(`/api/admin/shipment-requests/${id}/assign-company`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shipmentCompanyId: selectedShipmentCompanyId }),
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError((data.error as string) ?? t(`${a}.shipmentActionsErrorGeneric`));
+        return;
+      }
+      router.refresh();
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function saveCarrierShortlist() {
+    if (shortlistKeys.length === 0) {
+      setError(t(`${a}.shipmentActionsShortlistRequired`));
+      return;
+    }
+    setLoading("shortlist");
+    setError(null);
+    try {
+      const items = shortlistKeys.map((key) =>
+        key.startsWith("platformDriver:")
+          ? { kind: "DRIVER" as const, targetId: key.slice("platformDriver:".length) }
+          : { kind: "COMPANY" as const, targetId: key.slice("directory:".length) },
+      );
+      const res = await fetch(`/api/admin/shipment-requests/${id}/invitees`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -212,9 +279,10 @@ export function ShipmentRequestAdminActions({
   }
 
   const actionBusy = loading === "approve" || loading === "reject";
+  const assignBusy = loading === "assignCarrier" || loading === "shortlist";
   const paymentReviewBusy = loading === "paymentApprove" || loading === "paymentReject";
   const q = companySearch.trim().toLowerCase();
-  const filteredShipmentCompanies = compatibleShipmentCompanies.filter((company) => {
+  const filteredAssignees = compatibleAssignees.filter((company) => {
     if (!q) return true;
     const hay = [
       company.company_name,
@@ -236,18 +304,24 @@ export function ShipmentRequestAdminActions({
         <p className="text-sm text-red-700 bg-red-50 rounded-lg px-3 py-2">{error}</p>
       )}
 
-      {isPendingCarrier && (
+      {canAssignCarrier && (
         <div className="space-y-3 rounded-xl border border-border bg-muted/20 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-medium">{t(`${a}.shipmentActionsAssignTitle`)}</p>
             <p className="rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground">
               {t(`${a}.shipmentActionsCompaniesCount`).replace(
                 "{count}",
-                String(filteredShipmentCompanies.length),
+                String(filteredAssignees.length),
               )}
             </p>
           </div>
-          {compatibleShipmentCompanies.length === 0 ? (
+          <p className="text-xs text-muted-foreground leading-relaxed">{t(`${a}.shipmentActionsShortlistHint`)}</p>
+          {showReassignWorkflowWarning ? (
+            <p className="rounded-lg border border-amber-200/90 bg-amber-50/90 px-3 py-2 text-xs font-medium text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
+              {t(`${a}.shipmentActionsReassignWorkflowWarning`)}
+            </p>
+          ) : null}
+          {compatibleAssignees.length === 0 ? (
             <p className="text-xs text-muted-foreground">{t(`${a}.shipmentActionsNoCompatible`)}</p>
           ) : (
             <>
@@ -258,76 +332,119 @@ export function ShipmentRequestAdminActions({
                   value={companySearch}
                   onChange={(e) => setCompanySearch(e.target.value)}
                   placeholder={t(`${a}.shipmentActionsSearchPlaceholder`)}
-                  disabled={loading === "approve"}
+                  disabled={assignBusy}
                 />
               </div>
 
               <div className="max-h-80 space-y-2 overflow-y-auto rounded-lg border border-border bg-background/80 p-2">
-                {filteredShipmentCompanies.length === 0 ? (
+                {filteredAssignees.length === 0 ? (
                   <p className="px-2 py-3 text-xs text-muted-foreground">
                     {t(`${a}.shipmentActionsNoSearchResults`)}
                   </p>
                 ) : (
-                  filteredShipmentCompanies.map((company) => {
-                    const isSelected = selectedShipmentCompanyId === company.id;
+                  filteredAssignees.map((company) => {
+                    const key = assigneeKey(company);
+                    const isSelected = shortlistKeySelected(key);
                     return (
-                      <button
-                        key={company.id}
-                        type="button"
-                        onClick={() => setSelectedShipmentCompanyId(company.id)}
-                        disabled={loading === "approve"}
-                        className={[
-                          "w-full rounded-lg border px-3 py-2 text-start transition-colors",
+                      <div
+                        key={key}
+                        className={cn(
+                          "flex gap-2 rounded-lg border px-2 py-2 transition-colors",
                           isSelected
                             ? "border-primary bg-primary/10 ring-1 ring-primary/30"
-                            : "border-border bg-background hover:bg-muted/40",
-                        ].join(" ")}
+                            : "border-border bg-background",
+                        )}
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm font-semibold text-foreground">
-                            {company.company_name ?? t(`${a}.shipmentActionsUnknownCompany`)}
-                          </p>
-                          <span className="shrink-0 rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                            {t(`${a}.shipmentActionsScore`).replace("{score}", String(company.score))}
-                          </span>
-                        </div>
-                        {company.representative_name ? (
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {company.representative_name}
-                          </p>
-                        ) : null}
-                        {(company.phone || company.email) && (
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {company.phone ? <span dir="ltr">{company.phone}</span> : null}
-                            {company.phone && company.email ? " • " : null}
-                            {company.email ? <span dir="ltr">{company.email}</span> : null}
-                          </p>
-                        )}
-                        {(company.truck_types || company.destinations) && (
-                          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                            {[company.truck_types, company.destinations].filter(Boolean).join(" • ")}
-                          </p>
-                        )}
-                      </button>
+                        <input
+                          type="checkbox"
+                          className="mt-1 size-4 shrink-0 accent-primary"
+                          checked={isSelected}
+                          onChange={() => toggleShortlistKey(key)}
+                          disabled={assignBusy}
+                          aria-label={t(`${a}.shipmentActionsShortlistToggle`)}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => toggleShortlistKey(key)}
+                          disabled={assignBusy}
+                          className="min-w-0 flex-1 rounded-md px-1 py-0.5 text-start transition-colors hover:bg-muted/30"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-sm font-semibold text-foreground">
+                              {company.company_name ?? t(`${a}.shipmentActionsUnknownCompany`)}
+                            </p>
+                            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+                              {company.source === "platformDriver" ? (
+                                <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                                  {t(`${a}.shipmentActionsPlatformCarrierBadge`)}
+                                </span>
+                              ) : (
+                                <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                                  {t(`${a}.shipmentActionsDirectoryCarrierBadge`)}
+                                </span>
+                              )}
+                              <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                                {t(`${a}.shipmentActionsScore`).replace("{score}", String(company.score))}
+                              </span>
+                            </div>
+                          </div>
+                          {company.representative_name ? (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {company.representative_name}
+                            </p>
+                          ) : null}
+                          {(company.phone || company.email) && (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {company.phone ? <span dir="ltr">{company.phone}</span> : null}
+                              {company.phone && company.email ? " • " : null}
+                              {company.email ? <span dir="ltr">{company.email}</span> : null}
+                            </p>
+                          )}
+                          {(company.truck_types || company.destinations) && (
+                            <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                              {[company.truck_types, company.destinations].filter(Boolean).join(" • ")}
+                            </p>
+                          )}
+                        </button>
+                      </div>
                     );
                   })
                 )}
               </div>
 
-              <Button
-                size="sm"
-                onClick={() => void assignShipmentCompany()}
-                disabled={loading === "approve" || !selectedShipmentCompanyId}
-              >
-                {loading === "approve"
-                  ? t(`${a}.shipmentActionsLoading`)
-                  : t(`${a}.shipmentActionsAssignButton`)}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  type="button"
+                  onClick={() => void saveCarrierShortlist()}
+                  disabled={assignBusy || shortlistKeys.length === 0}
+                >
+                  {loading === "shortlist"
+                    ? t(`${a}.shipmentActionsLoading`)
+                    : t(`${a}.shipmentActionsSaveShortlist`)}
+                </Button>
+                <Button
+                  size="sm"
+                  type="button"
+                  variant="secondary"
+                  onClick={() => void assignImmediateCarrier()}
+                  disabled={assignBusy || shortlistKeys.length !== 1}
+                >
+                  {loading === "assignCarrier"
+                    ? t(`${a}.shipmentActionsLoading`)
+                    : t(`${a}.shipmentActionsAssignButton`)}
+                </Button>
+              </div>
             </>
           )}
           {assignedShipmentCompany && (
             <p className="text-xs text-muted-foreground">
               {t(`${a}.shipmentActionsAssignedCurrent`)} {assignedShipmentCompany.company_name ?? "—"}
+            </p>
+          )}
+          {!assignedShipmentCompany && assignedPlatformDriverName && (
+            <p className="text-xs text-muted-foreground">
+              {t(`${a}.shipmentActionsAssignedCurrent`)} {assignedPlatformDriverName}
             </p>
           )}
         </div>
@@ -416,7 +533,9 @@ export function ShipmentRequestAdminActions({
       )}
 
       {status === "ADMIN_REJECTED" && (
-        <p className="text-xs text-muted-foreground">{t(`${a}.shipmentActionsAdminRejected`)}</p>
+        <p className="text-xs text-muted-foreground">
+          {t(`${a}.shipmentActionsAdminRejected`)} {t(`${a}.shipmentActionsAdminRejectedPickCarrier`)}
+        </p>
       )}
 
       {status === "AWAITING_PAYMENT_APPROVAL" && invoiceImageUrl && (

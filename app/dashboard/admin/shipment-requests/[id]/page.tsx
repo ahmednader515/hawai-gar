@@ -18,7 +18,10 @@ import { getLocale, getTranslations } from "@/lib/i18n/server";
 import { cn } from "@/lib/utils";
 import { Building2, Calendar, ChevronLeft, MapPin, Package, Phone, Truck } from "lucide-react";
 import { ShipmentRequestProgressBar } from "@/components/shipment-request-progress-bar";
-import { getCompatibleShipmentCompanies } from "@/lib/shipment-company-compatibility";
+import {
+  getCompatiblePlatformDrivers,
+  getCompatibleShipmentCompanies,
+} from "@/lib/shipment-company-compatibility";
 
 function statusBadgeClass(status: string): string {
   switch (status) {
@@ -114,6 +117,53 @@ export default async function AdminShipmentRequestDetailsPage({
 
   if (!r) redirect("/dashboard/admin");
 
+  const inviteeRows = await prisma.shipmentRequestInvitee.findMany({
+    where: { shipmentRequestId: id },
+    select: { kind: true, targetId: true },
+  });
+  const initialShortlistKeys = inviteeRows.map((row) =>
+    row.kind === "DRIVER" ? `platformDriver:${row.targetId}` : `directory:${row.targetId}`,
+  );
+
+  const shortlistDriverIds = inviteeRows.filter((x) => x.kind === "DRIVER").map((x) => x.targetId);
+  const shortlistCompanyIds = inviteeRows.filter((x) => x.kind === "COMPANY").map((x) => x.targetId);
+
+  const [shortlistDrivers, shortlistCompanies] = await Promise.all([
+    shortlistDriverIds.length > 0
+      ? prisma.user.findMany({
+          where: { id: { in: shortlistDriverIds } },
+          select: {
+            id: true,
+            email: true,
+            driverProfile: {
+              select: { fullName: true, phone: true, carPlate: true },
+            },
+          },
+        })
+      : Promise.resolve([]),
+    shortlistCompanyIds.length > 0
+      ? prisma.shipmentCompany.findMany({
+          where: { id: { in: shortlistCompanyIds } },
+          select: {
+            id: true,
+            company_name: true,
+            representative_name: true,
+            phone: true,
+            email: true,
+          },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const shortlistDisplay = inviteeRows.map((row) => {
+    if (row.kind === "DRIVER") {
+      const u = shortlistDrivers.find((d) => d.id === row.targetId);
+      return { kind: "DRIVER" as const, id: row.targetId, user: u ?? null };
+    }
+    const c = shortlistCompanies.find((co) => co.id === row.targetId);
+    return { kind: "COMPANY" as const, id: row.targetId, company: c ?? null };
+  });
+
   const [companyUser, carrierUser] = await Promise.all([
     r.companyId
       ? prisma.user.findUnique({
@@ -144,6 +194,7 @@ export default async function AdminShipmentRequestDetailsPage({
                 carPlate: true,
                 carType: true,
                 licenseNumber: true,
+                listingCompanyName: true,
               },
             },
           },
@@ -166,33 +217,85 @@ export default async function AdminShipmentRequestDetailsPage({
       })
     : null;
 
-  const shipmentCompanies = await prisma.shipmentCompany.findMany({
-    select: {
-      id: true,
-      company_name: true,
-      representative_name: true,
-      phone: true,
-      email: true,
-      truck_types: true,
-      destinations: true,
-    },
-  });
+  const [shipmentCompanies, platformDriverUsers] = await Promise.all([
+    prisma.shipmentCompany.findMany({
+      where: { blacklistedAt: null },
+      select: {
+        id: true,
+        company_name: true,
+        representative_name: true,
+        phone: true,
+        email: true,
+        truck_types: true,
+        destinations: true,
+      },
+    }),
+    prisma.user.findMany({
+      where: { role: "DRIVER", blacklistedAt: null },
+      include: { driverProfile: true },
+    }),
+  ]);
 
-  const compatibleShipmentCompanies = getCompatibleShipmentCompanies(
-    {
-      shipmentType: r.shipmentType,
-      containerSize: r.containerSize,
-      containersCount: r.containersCount,
-      fromText: r.fromText,
-      toText: r.toText,
-      fromLat: r.fromLat,
-      fromLng: r.fromLng,
-      toLat: r.toLat,
-      toLng: r.toLng,
-      notes: r.notes,
-    },
+  const requestCompatInput = {
+    shipmentType: r.shipmentType,
+    containerSize: r.containerSize,
+    containersCount: r.containersCount,
+    fromText: r.fromText,
+    toText: r.toText,
+    fromLat: r.fromLat,
+    fromLng: r.fromLng,
+    toLat: r.toLat,
+    toLng: r.toLng,
+    notes: r.notes,
+  };
+
+  const driversForCompat = platformDriverUsers
+    .filter(
+      (u): u is typeof u & { driverProfile: NonNullable<typeof u.driverProfile> } =>
+        u.driverProfile != null,
+    )
+    .map((u) => ({
+      id: u.id,
+      email: u.email,
+      createdAt: u.createdAt,
+      driverProfile: u.driverProfile,
+    }));
+
+  const compatiblePlatformDrivers = getCompatiblePlatformDrivers(requestCompatInput, driversForCompat).slice(0, 40);
+  const compatibleDirectoryCompanies = getCompatibleShipmentCompanies(
+    requestCompatInput,
     shipmentCompanies,
   ).slice(0, 40);
+
+  const compatibleAssignees = [
+    ...compatiblePlatformDrivers.map((item) => ({
+      source: "platformDriver" as const,
+      id: item.company.id,
+      company_name: item.company.company_name,
+      representative_name: item.company.representative_name,
+      phone: item.company.phone,
+      email: item.company.email,
+      truck_types: item.company.truck_types,
+      destinations: item.company.destinations,
+      score: item.score,
+    })),
+    ...compatibleDirectoryCompanies.map((item) => ({
+      source: "directoryCompany" as const,
+      id: item.company.id,
+      company_name: item.company.company_name,
+      representative_name: item.company.representative_name,
+      phone: item.company.phone,
+      email: item.company.email,
+      truck_types: item.company.truck_types,
+      destinations: item.company.destinations,
+      score: item.score,
+    })),
+  ].sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    const na = (a.company_name ?? "").toLowerCase();
+    const nb = (b.company_name ?? "").toLowerCase();
+    return na.localeCompare(nb, "ar");
+  });
 
   const hasCoords =
     r.fromLat != null && r.fromLng != null && r.toLat != null && r.toLng != null;
@@ -254,6 +357,21 @@ export default async function AdminShipmentRequestDetailsPage({
                   </div>
                   <div className="font-medium tabular-nums">
                     {formatDashboardDateTime(r.carrierDecisionAt, dateLocaleKey)}
+                  </div>
+                </div>
+              )}
+              {r.status === "CARRIER_REFUSED" && carrierUser?.driverProfile && (
+                <div className="rounded-lg border border-orange-200/80 bg-orange-50/80 px-2.5 py-2 dark:border-orange-900/40 dark:bg-orange-950/25">
+                  <div className="text-xs text-muted-foreground">{t(`${da}.shipmentDetailRefusedBy`)}</div>
+                  <div className="mt-1 font-semibold text-foreground">{carrierUser.driverProfile.fullName}</div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">
+                    {carrierUser.driverProfile.phone}
+                    {carrierUser.email ? (
+                      <>
+                        {" "}
+                        · <span dir="ltr">{carrierUser.email}</span>
+                      </>
+                    ) : null}
                   </div>
                 </div>
               )}
@@ -411,9 +529,88 @@ export default async function AdminShipmentRequestDetailsPage({
                   {t(`${da}.carrier`)}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 pt-3 text-sm">
+              <CardContent className="space-y-4 pt-3 text-sm">
+                {shortlistDisplay.length > 0 ? (
+                  <div className="space-y-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {t(`${da}.shipmentDetailShortlistTitle`)}
+                    </p>
+                    <ul className="list-none space-y-3 p-0 m-0">
+                      {shortlistDisplay.map((entry) => (
+                        <li
+                          key={`${entry.kind}-${entry.id}`}
+                          className="rounded-xl border border-border/80 bg-muted/25 px-3 py-3 shadow-sm"
+                        >
+                          {entry.kind === "DRIVER" && entry.user?.driverProfile ? (
+                            <>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                                  {t(`${da}.shipmentDetailShortlistPlatformBadge`)}
+                                </span>
+                              </div>
+                              <p className="mt-2 font-semibold text-foreground">
+                                {entry.user.driverProfile.fullName}
+                              </p>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                {t(`${da}.shipmentDetailCarrierPhone`)}: {entry.user.driverProfile.phone}
+                              </p>
+                              {entry.user.email ? (
+                                <p className="mt-0.5 break-all text-xs text-muted-foreground" dir="ltr">
+                                  {entry.user.email}
+                                </p>
+                              ) : null}
+                            </>
+                          ) : entry.kind === "COMPANY" && entry.company ? (
+                            <>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                                  {t(`${da}.shipmentDetailShortlistDirectoryBadge`)}
+                                </span>
+                              </div>
+                              <p className="mt-2 font-semibold text-foreground">
+                                {entry.company.company_name ?? "—"}
+                              </p>
+                              {entry.company.representative_name ? (
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                  {entry.company.representative_name}
+                                </p>
+                              ) : null}
+                              {(entry.company.phone || entry.company.email) && (
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                  {entry.company.phone ? (
+                                    <span dir="ltr">{entry.company.phone}</span>
+                                  ) : null}
+                                  {entry.company.phone && entry.company.email ? " · " : null}
+                                  {entry.company.email ? (
+                                    <span dir="ltr" className="break-all">
+                                      {entry.company.email}
+                                    </span>
+                                  ) : null}
+                                </p>
+                              )}
+                            </>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">
+                              {entry.kind === "DRIVER"
+                                ? t(`${da}.shipmentDetailShortlistMissingDriver`)
+                                : t(`${da}.shipmentDetailShortlistMissingCompany`)}
+                            </p>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
                 {assignedShipmentCompany ? (
                   <>
+                    {shortlistDisplay.length > 0 ? (
+                      <div className="border-t border-border/60 pt-3">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          {t(`${da}.shipmentDetailAssignedCarrierTitle`)}
+                        </p>
+                      </div>
+                    ) : null}
                     <p className="font-semibold text-foreground">
                       {assignedShipmentCompany.company_name ?? "—"}
                     </p>
@@ -442,6 +639,13 @@ export default async function AdminShipmentRequestDetailsPage({
                   </>
                 ) : carrierUser?.driverProfile ? (
                   <>
+                    {shortlistDisplay.length > 0 ? (
+                      <div className="border-t border-border/60 pt-3">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          {t(`${da}.shipmentDetailAssignedCarrierTitle`)}
+                        </p>
+                      </div>
+                    ) : null}
                     <p className="font-semibold text-foreground">{carrierUser.driverProfile.fullName}</p>
                     <p className="text-muted-foreground">
                       {t(`${da}.shipmentDetailCarrierPhone`)}: {carrierUser.driverProfile.phone}
@@ -465,9 +669,9 @@ export default async function AdminShipmentRequestDetailsPage({
                       </p>
                     )}
                   </>
-                ) : (
+                ) : shortlistDisplay.length === 0 ? (
                   <p className="text-muted-foreground">—</p>
-                )}
+                ) : null}
               </CardContent>
             </Card>
           </div>
@@ -498,16 +702,14 @@ export default async function AdminShipmentRequestDetailsPage({
                       }
                     : null
                 }
-                compatibleShipmentCompanies={compatibleShipmentCompanies.map((item) => ({
-                  id: item.company.id,
-                  company_name: item.company.company_name,
-                  representative_name: item.company.representative_name,
-                  phone: item.company.phone,
-                  email: item.company.email,
-                  truck_types: item.company.truck_types,
-                  destinations: item.company.destinations,
-                  score: item.score,
-                }))}
+                assignedPlatformDriverName={
+                  !assignedShipmentCompany && carrierUser?.driverProfile
+                    ? carrierUser.driverProfile.listingCompanyName?.trim() ||
+                      carrierUser.driverProfile.fullName
+                    : null
+                }
+                initialShortlistKeys={initialShortlistKeys}
+                compatibleAssignees={compatibleAssignees}
               />
             </CardContent>
           </Card>

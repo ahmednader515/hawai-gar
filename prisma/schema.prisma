@@ -34,6 +34,8 @@ model User {
   image         String?
   passwordHash  String?
   role          UserRole
+  /// Set when admin blacklists the account; excluded from active client lists.
+  blacklistedAt DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -45,6 +47,7 @@ model User {
   ordersAsDriver  Order[]     @relation("OrderDriver")
 
   @@index([role])
+  @@index([blacklistedAt])
 }
 
 model Account {
@@ -115,9 +118,18 @@ model DriverProfile {
   nationalId     String?
   phone          String
   licenseNumber  String?
-  carPlate       String
+  /// Optional — not collected on public signup; may exist on legacy rows.
+  carPlate       String?
   carType        String?
   carCapacity    String?
+  /// Aligned with shipment_companies.company_name — fleet / listing name for matching & admin.
+  listingCompanyName String?
+  /// Aligned with shipment_companies.representative_name.
+  representativeName String?
+  /// Aligned with shipment_companies.truck_types — free-text fleet capabilities.
+  truckTypesCatalog  String?
+  /// Aligned with shipment_companies.destinations — coverage (محلي، دولي، الخليج…).
+  serviceDestinations String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -217,6 +229,8 @@ model ShipmentRequest {
   carrierId       String?
   shipmentCompanyId String?
   carrierDecisionAt DateTime?
+  /// True only when the carrier submits accept/refuse via POST /carrier-decision (not admin assign).
+  carrierSelfSubmittedDecision Boolean @default(false)
   adminId         String?
   adminDecisionAt DateTime?
   /// Payment / invoice URL shown to the company when tracking (set by admin).
@@ -226,6 +240,8 @@ model ShipmentRequest {
   createdAt       DateTime @default(now())
 
   shipmentCompany ShipmentCompany? @relation(fields: [shipmentCompanyId], references: [id], onDelete: SetNull)
+  /// Shortlisted carriers (platform drivers and/or directory companies). If any DRIVER rows exist, only those drivers see the request in their dashboard; if none, all drivers see it (legacy).
+  invitees        ShipmentRequestInvitee[]
 
   @@index([createdAt])
   @@index([status])
@@ -242,6 +258,8 @@ model ShipmentCompany {
   phone               String?
   truck_types         String?
   destinations        String?
+  /// Set when admin blacklists this directory entry; excluded from active directory lists.
+  blacklistedAt       DateTime?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   requests            ShipmentRequest[]
@@ -249,5 +267,21 @@ model ShipmentCompany {
   @@index([company_name])
   @@index([email])
   @@index([phone])
+  @@index([blacklistedAt])
   @@map("shipment_companies")
+}
+
+model ShipmentRequestInvitee {
+  id                String   @id @default(cuid())
+  shipmentRequestId String
+  /// "DRIVER" (platform user id) or "COMPANY" (directory ShipmentCompany id)
+  kind              String
+  targetId          String
+  createdAt         DateTime @default(now())
+
+  shipmentRequest ShipmentRequest @relation(fields: [shipmentRequestId], references: [id], onDelete: Cascade)
+
+  @@unique([shipmentRequestId, kind, targetId])
+  @@index([shipmentRequestId])
+  @@index([kind, targetId])
 }

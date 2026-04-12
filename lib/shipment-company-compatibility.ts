@@ -1,3 +1,5 @@
+import { catalogForMatching } from "@/lib/catalog-tags";
+
 type ShipmentRequestLike = {
   shipmentType: string | null;
   containerSize: string | null;
@@ -20,6 +22,71 @@ export type ShipmentCompanyLike = {
   truck_types: string | null;
   destinations: string | null;
 };
+
+/** Lets platform-registered drivers pass destination matching when scoring against a request. */
+const PLATFORM_CARRIER_DESTINATIONS_FALLBACK =
+  "محلي local دولي domestic international الخليج global";
+
+export type DriverUserForCompatibility = {
+  id: string;
+  email: string;
+  createdAt: Date;
+  driverProfile: {
+    fullName: string;
+    phone: string;
+    carPlate: string | null;
+    carType: string | null;
+    carCapacity: string | null;
+    listingCompanyName: string | null;
+    representativeName: string | null;
+    truckTypesCatalog: string | null;
+    serviceDestinations: string | null;
+  };
+};
+
+/**
+ * Maps a DRIVER user to the same shape as {@link ShipmentCompanyLike} for reuse of scoring/filtering.
+ */
+export function driverUserToShipmentCompanyLike(d: DriverUserForCompatibility): ShipmentCompanyLike {
+  const dp = d.driverProfile;
+  const truckFromParts = [dp.carType, dp.carCapacity, dp.carPlate].filter(Boolean).join(" ");
+  const catalogTruck = catalogForMatching(dp.truckTypesCatalog);
+  const truck_types =
+    catalogTruck ||
+    truckFromParts ||
+    dp.fullName ||
+    "ناقل";
+  const catalogDest = catalogForMatching(dp.serviceDestinations);
+  const destinations =
+    catalogDest || PLATFORM_CARRIER_DESTINATIONS_FALLBACK;
+  return {
+    id: d.id,
+    company_name: (dp.listingCompanyName && dp.listingCompanyName.trim()) || dp.fullName,
+    representative_name: (dp.representativeName && dp.representativeName.trim()) || dp.fullName,
+    phone: dp.phone,
+    email: d.email,
+    truck_types,
+    destinations,
+  };
+}
+
+/**
+ * Compatible platform drivers for a request, ordered by score (then oldest signup first).
+ */
+export function getCompatiblePlatformDrivers(
+  request: ShipmentRequestLike,
+  drivers: DriverUserForCompatibility[],
+): ShipmentCompanyCompatibility[] {
+  const likes = drivers.map(driverUserToShipmentCompanyLike);
+  const scored = getCompatibleShipmentCompanies(request, likes);
+  const created = new Map(drivers.map((d) => [d.id, d.createdAt.getTime()]));
+  return scored.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    const ta = created.get(a.company.id) ?? 0;
+    const tb = created.get(b.company.id) ?? 0;
+    return ta - tb;
+  });
+}
 
 export type ShipmentCompanyCompatibility = {
   company: ShipmentCompanyLike;

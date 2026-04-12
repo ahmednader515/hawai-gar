@@ -8,6 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/providers/i18n-provider";
 import type { DriverProfile } from "@prisma/client";
+import { TagInput } from "@/components/tag-input";
+import {
+  initialDestinationTagsFromCarrier,
+  initialTruckTagsFromCarrier,
+  serializeTagList,
+} from "@/lib/catalog-tags";
 
 type AccountErrorCode =
   | "PASSWORD_REQUIRED"
@@ -54,20 +60,27 @@ export function AccountSettingsForm(props: Props) {
     props.variant === "carrier" ? props.initialDriver.fullName : "",
   );
   const [phone, setPhone] = useState(props.variant === "carrier" ? props.initialDriver.phone : "");
-  const [nationalId, setNationalId] = useState(
-    props.variant === "carrier" ? props.initialDriver.nationalId ?? "" : "",
-  );
-  const [licenseNumber, setLicenseNumber] = useState(
-    props.variant === "carrier" ? props.initialDriver.licenseNumber ?? "" : "",
-  );
-  const [carPlate, setCarPlate] = useState(
-    props.variant === "carrier" ? props.initialDriver.carPlate : "",
-  );
   const [carType, setCarType] = useState(
     props.variant === "carrier" ? props.initialDriver.carType ?? "" : "",
   );
   const [carCapacity, setCarCapacity] = useState(
     props.variant === "carrier" ? props.initialDriver.carCapacity ?? "" : "",
+  );
+  const [listingCompanyName, setListingCompanyName] = useState(
+    props.variant === "carrier"
+      ? props.initialDriver.listingCompanyName?.trim() || props.initialDriver.fullName
+      : "",
+  );
+  const [representativeName, setRepresentativeName] = useState(
+    props.variant === "carrier"
+      ? props.initialDriver.representativeName?.trim() || props.initialDriver.fullName
+      : "",
+  );
+  const [truckTags, setTruckTags] = useState<string[]>(() =>
+    props.variant === "carrier" ? initialTruckTagsFromCarrier(props.initialDriver) : [],
+  );
+  const [destinationTags, setDestinationTags] = useState<string[]>(() =>
+    props.variant === "carrier" ? initialDestinationTagsFromCarrier(props.initialDriver) : [],
   );
 
   const [error, setError] = useState("");
@@ -106,13 +119,18 @@ export function AccountSettingsForm(props: Props) {
     };
 
     if (props.variant === "carrier") {
+      if (truckTags.length === 0 || destinationTags.length === 0) {
+        setError(t("accountForm.errors.VALIDATION"));
+        return;
+      }
       body.fullName = fullName.trim();
       body.phone = phone.trim();
-      body.nationalId = nationalId.trim() || null;
-      body.licenseNumber = licenseNumber.trim() || null;
-      body.carPlate = carPlate.trim();
       body.carType = carType.trim();
       body.carCapacity = carCapacity.trim();
+      body.listingCompanyName = listingCompanyName.trim();
+      body.representativeName = representativeName.trim() || fullName.trim();
+      body.truckTypesCatalog = serializeTagList(truckTags);
+      body.serviceDestinations = serializeTagList(destinationTags);
     }
 
     setLoading(true);
@@ -153,6 +171,27 @@ export function AccountSettingsForm(props: Props) {
         <section className="space-y-4">
           <h2 className="text-lg font-semibold">{t("accountForm.sectionProfile")}</h2>
           <div className="space-y-2">
+            <Label htmlFor="listingCompanyName">{t("accountForm.listingCompanyName")}</Label>
+            <Input
+              id="listingCompanyName"
+              value={listingCompanyName}
+              onChange={(e) => setListingCompanyName(e.target.value)}
+              required
+              disabled={loading}
+              className="h-11"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="representativeName">{t("accountForm.representativeName")}</Label>
+            <Input
+              id="representativeName"
+              value={representativeName}
+              onChange={(e) => setRepresentativeName(e.target.value)}
+              disabled={loading}
+              className="h-11"
+            />
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="fullName">{t("accountForm.fullName")}</Label>
             <Input
               id="fullName"
@@ -169,37 +208,6 @@ export function AccountSettingsForm(props: Props) {
               id="phone"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              required
-              disabled={loading}
-              className="h-11"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="nationalId">{t("accountForm.nationalId")}</Label>
-            <Input
-              id="nationalId"
-              value={nationalId}
-              onChange={(e) => setNationalId(e.target.value)}
-              disabled={loading}
-              className="h-11"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="licenseNumber">{t("accountForm.licenseNumber")}</Label>
-            <Input
-              id="licenseNumber"
-              value={licenseNumber}
-              onChange={(e) => setLicenseNumber(e.target.value)}
-              disabled={loading}
-              className="h-11"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="carPlate">{t("accountForm.carPlate")}</Label>
-            <Input
-              id="carPlate"
-              value={carPlate}
-              onChange={(e) => setCarPlate(e.target.value)}
               required
               disabled={loading}
               className="h-11"
@@ -225,6 +233,32 @@ export function AccountSettingsForm(props: Props) {
               required
               disabled={loading}
               className="h-11"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="account-truck-tags">{t("accountForm.truckTypesCatalog")}</Label>
+            <TagInput
+              id="account-truck-tags"
+              tags={truckTags}
+              onTagsChange={setTruckTags}
+              placeholder={t("registerForm.placeholders.truckTypesCatalog")}
+              addLabel={t("registerForm.tagAdd")}
+              removeTagAria={t("registerForm.tagRemoveAria")}
+              disabled={loading}
+              hint={t("registerForm.tagInputHint")}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="account-dest-tags">{t("accountForm.serviceDestinations")}</Label>
+            <TagInput
+              id="account-dest-tags"
+              tags={destinationTags}
+              onTagsChange={setDestinationTags}
+              placeholder={t("registerForm.placeholders.serviceDestinations")}
+              addLabel={t("registerForm.tagAdd")}
+              removeTagAria={t("registerForm.tagRemoveAria")}
+              disabled={loading}
+              hint={t("registerForm.tagInputHint")}
             />
           </div>
         </section>

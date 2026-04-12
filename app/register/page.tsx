@@ -27,7 +27,7 @@ export default async function RegisterPage() {
         <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 overflow-auto relative">
           <LoginToolbar />
           <Link href="/" className="mb-6 sm:mb-8 shrink-0">
-            <Image src="/logo.png" alt="hawai Logisti" width={56} height={56} className="object-contain" />
+            <Image src="/logo.png" alt="Hawai Logisti" width={56} height={56} className="object-contain" />
           </Link>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground text-center mb-2 shrink-0">
             {t("registerPage.titleCarrier")}

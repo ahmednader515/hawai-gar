@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { sendShipmentCompletedEmails } from "@/lib/shipment-completion-email";
 
 /** Admin approves or rejects company-uploaded payment proof image. */
 export async function PATCH(
@@ -43,6 +44,11 @@ export async function PATCH(
         where: { id },
         data: { status: "COMPLETE" },
       });
+      try {
+        await sendShipmentCompletedEmails(id);
+      } catch (e) {
+        console.error("[payment-proof-review] completion emails:", e);
+      }
     } else {
       await prisma.shipmentRequest.update({
         where: { id },

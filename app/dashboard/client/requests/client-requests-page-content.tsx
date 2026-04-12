@@ -11,6 +11,7 @@ import { AR_LOCALE_LATN } from "@/lib/locale";
 import { CopyableRequestId } from "@/components/copyable-request-id";
 import { SarPriceDisplay } from "@/components/sar-price-display";
 import { ShipmentPriceChangeAlert } from "@/components/shipment-price-change-alert";
+import type { CarrierAckVariant } from "@/lib/carrier-ack-variant";
 import type { AppLocale } from "@/lib/i18n/config";
 import { sarAmountInWords } from "@/lib/format-sar";
 import { useI18n } from "@/components/providers/i18n-provider";
@@ -18,6 +19,9 @@ import { useI18n } from "@/components/providers/i18n-provider";
 export type SerializedShipmentRequest = {
   id: string;
   status: string;
+  carrierId: string | null;
+  carrierSelfSubmittedDecision: boolean;
+  carrierAckVariant: CarrierAckVariant;
   createdAt: string;
   fromText: string;
   toText: string;
@@ -114,10 +118,12 @@ function legacyMatches(q: string, o: SerializedLegacyOrder, dateLocale: string) 
 }
 
 export function ClientRequestsPageContent({
+  currentUserId,
   priceChangedApprovedCount,
   shipments,
   legacyOrders,
 }: {
+  currentUserId: string;
   priceChangedApprovedCount: number;
   shipments: SerializedShipmentRequest[];
   legacyOrders: SerializedLegacyOrder[];
@@ -347,7 +353,13 @@ export function ClientRequestsPageContent({
                       </div>
                     </div>
                   )}
-                  <ShipmentRequestActions id={r.id} status={r.status} />
+                  <ShipmentRequestActions
+                    id={r.id}
+                    status={r.status}
+                    carrierAckVariant={r.carrierAckVariant}
+                    carrierId={r.carrierId}
+                    currentUserId={currentUserId}
+                  />
                   <div className="border-t border-border pt-4 sm:hidden">
                     <Link href={detailsHref} className={detailsBtnClass}>
                       {t("dashboard.admin.viewDetails")}

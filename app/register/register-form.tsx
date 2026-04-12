@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { TRUCK_SIZE_OPTIONS, TRUCK_TYPE_OPTIONS_BY_SIZE } from "@/lib/truck-options";
+import { TagInput } from "@/components/tag-input";
+import { serializeTagList } from "@/lib/catalog-tags";
 
 const inputClass =
   "h-11 bg-sky-50/80 dark:bg-sky-950/20 border-gray-200 focus:ring-primary/30 focus:border-primary";
@@ -41,11 +43,12 @@ export function RegisterForm({ forcedRole }: { forcedRole?: Role }) {
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [fullName, setFullName] = useState("");
-  const [nationalId, setNationalId] = useState("");
-  const [licenseNumber, setLicenseNumber] = useState("");
-  const [carPlate, setCarPlate] = useState("");
   const [carType, setCarType] = useState("");
   const [carCapacity, setCarCapacity] = useState("");
+  const [listingCompanyName, setListingCompanyName] = useState("");
+  const [representativeName, setRepresentativeName] = useState("");
+  const [truckTypeTags, setTruckTypeTags] = useState<string[]>([]);
+  const [destinationTags, setDestinationTags] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -174,11 +177,12 @@ export function RegisterForm({ forcedRole }: { forcedRole?: Role }) {
               registrationPreVerified: true,
               fullName,
               phone,
-              nationalId: nationalId || undefined,
-              licenseNumber: licenseNumber || undefined,
-              carPlate,
               carType: carType || undefined,
               carCapacity: carCapacity || undefined,
+              listingCompanyName: listingCompanyName.trim(),
+              representativeName: representativeName.trim() || undefined,
+              truckTypesCatalog: serializeTagList(truckTypeTags),
+              serviceDestinations: serializeTagList(destinationTags),
             };
 
       const res = await fetch("/api/register", {
@@ -313,7 +317,13 @@ export function RegisterForm({ forcedRole }: { forcedRole?: Role }) {
           }
           if (
             role === "DRIVER" &&
-            (!fullName || !phone || !carPlate || !carCapacity || !carType)
+            (!fullName ||
+              !phone ||
+              !carCapacity ||
+              !carType ||
+              !listingCompanyName.trim() ||
+              truckTypeTags.length === 0 ||
+              destinationTags.length === 0)
           ) {
             setError(t("registerForm.allFieldsRequired"));
             return;
@@ -448,6 +458,27 @@ export function RegisterForm({ forcedRole }: { forcedRole?: Role }) {
         {role === "DRIVER" && (
           <>
             <div className="space-y-2">
+              <Label>{t("registerForm.listingCompanyName")}</Label>
+              <Input
+                value={listingCompanyName}
+                onChange={(e) => setListingCompanyName(e.target.value)}
+                required
+                placeholder={t("registerForm.placeholders.listingCompanyName")}
+                className={inputClass}
+              />
+              <p className="text-xs text-muted-foreground">{t("registerForm.listingCompanyNameHint")}</p>
+            </div>
+            <div className="space-y-2">
+              <Label>{t("registerForm.representativeName")}</Label>
+              <Input
+                value={representativeName}
+                onChange={(e) => setRepresentativeName(e.target.value)}
+                placeholder={t("registerForm.placeholders.representativeName")}
+                className={inputClass}
+              />
+              <p className="text-xs text-muted-foreground">{t("registerForm.representativeNameHint")}</p>
+            </div>
+            <div className="space-y-2">
               <Label>{t("registerForm.fullName")}</Label>
               <Input
                 value={fullName}
@@ -464,29 +495,6 @@ export function RegisterForm({ forcedRole }: { forcedRole?: Role }) {
                 onChange={(e) => setPhone(e.target.value)}
                 required
                 placeholder={t("registerForm.placeholders.phone")}
-                className={inputClass}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{t("registerForm.nationalIdOptional")}</Label>
-              <Input
-                value={nationalId}
-                onChange={(e) => setNationalId(e.target.value)}
-                placeholder="1234567890"
-                className={inputClass}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{t("registerForm.licenseNumberOptional")}</Label>
-              <Input value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} className={inputClass} />
-            </div>
-            <div className="space-y-2">
-              <Label>{t("registerForm.carPlate")}</Label>
-              <Input
-                value={carPlate}
-                onChange={(e) => setCarPlate(e.target.value)}
-                required
-                placeholder={t("registerForm.placeholders.carPlate")}
                 className={inputClass}
               />
             </div>
@@ -525,6 +533,34 @@ export function RegisterForm({ forcedRole }: { forcedRole?: Role }) {
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reg-truck-tags">{t("registerForm.truckTypesCatalog")}</Label>
+              <TagInput
+                id="reg-truck-tags"
+                tags={truckTypeTags}
+                onTagsChange={setTruckTypeTags}
+                placeholder={t("registerForm.placeholders.truckTypesCatalog")}
+                addLabel={t("registerForm.tagAdd")}
+                removeTagAria={t("registerForm.tagRemoveAria")}
+                inputClassName={inputClass}
+                hint={t("registerForm.tagInputHint")}
+              />
+              <p className="text-xs text-muted-foreground">{t("registerForm.truckTypesCatalogHint")}</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reg-dest-tags">{t("registerForm.serviceDestinations")}</Label>
+              <TagInput
+                id="reg-dest-tags"
+                tags={destinationTags}
+                onTagsChange={setDestinationTags}
+                placeholder={t("registerForm.placeholders.serviceDestinations")}
+                addLabel={t("registerForm.tagAdd")}
+                removeTagAria={t("registerForm.tagRemoveAria")}
+                inputClassName={inputClass}
+                hint={t("registerForm.tagInputHint")}
+              />
+              <p className="text-xs text-muted-foreground">{t("registerForm.serviceDestinationsHint")}</p>
             </div>
           </>
         )}

@@ -78,6 +78,27 @@ type MyShipmentRequestItem = {
   createdAt: string;
 };
 
+type HeroAccountData = {
+  name: string | null;
+  email: string;
+  role: string;
+  companyProfile?: {
+    companyName: string;
+    contactPerson: string;
+    phone: string;
+    address: string | null;
+    city: string | null;
+    commercialRegister: string | null;
+  } | null;
+  driverProfile?: {
+    fullName: string;
+    phone: string;
+    carPlate: string | null;
+    carType: string | null;
+    carCapacity: string | null;
+  } | null;
+};
+
 export function HeroSection({
   isLoggedIn = false,
   userRole = null,
@@ -90,7 +111,7 @@ export function HeroSection({
   contactPhone?: string | null;
 }) {
   const { t, locale } = useI18n();
-  const { data: session } = useSession();
+  const { data: session, update: updateSession } = useSession();
   const liveRole = (session?.user as { role?: string } | undefined)?.role ?? null;
   const effectiveUserRole = liveRole ?? userRole;
   const effectiveIsLoggedIn = !!session?.user || isLoggedIn;
@@ -120,7 +141,22 @@ export function HeroSection({
   const [submitResult, setSubmitResult] = useState<null | { ok: true; id: string } | { ok: false; error: string }>(
     null
   );
-  const [shipperTab, setShipperTab] = useState<"create" | "track">("create");
+  const [shipperTab, setShipperTab] = useState<"create" | "track" | "account">("create");
+  const [accountData, setAccountData] = useState<HeroAccountData | null>(null);
+  const [accountLoading, setAccountLoading] = useState(false);
+  const [accountError, setAccountError] = useState<string | null>(null);
+  const [coCompanyName, setCoCompanyName] = useState("");
+  const [coContactPerson, setCoContactPerson] = useState("");
+  const [coPhone, setCoPhone] = useState("");
+  const [coAddress, setCoAddress] = useState("");
+  const [coCity, setCoCity] = useState("");
+  const [coCommercialRegister, setCoCommercialRegister] = useState("");
+  const [coEmail, setCoEmail] = useState("");
+  const [accountCurrentPassword, setAccountCurrentPassword] = useState("");
+  const [accountNewPassword, setAccountNewPassword] = useState("");
+  const [accountSaveLoading, setAccountSaveLoading] = useState(false);
+  const [accountSaveError, setAccountSaveError] = useState<string | null>(null);
+  const [accountSaveSuccess, setAccountSaveSuccess] = useState(false);
   const [locationLocked, setLocationLocked] = useState(false);
   const [trackingId, setTrackingId] = useState("");
   const [trackingLoading, setTrackingLoading] = useState(false);
@@ -239,6 +275,104 @@ export function HeroSection({
       cancelled = true;
     };
   }, [canShip, shipperTab, t]);
+
+  useEffect(() => {
+    if (shipperTab !== "account" || !effectiveIsLoggedIn) return;
+    let cancelled = false;
+    setAccountLoading(true);
+    setAccountError(null);
+    void (async () => {
+      try {
+        const res = await fetch("/api/account");
+        const data = (await res.json().catch(() => ({}))) as HeroAccountData & { error?: string };
+        if (!res.ok) {
+          if (!cancelled) {
+            setAccountError(typeof data?.error === "string" ? data.error : t("hero.account.loadError"));
+            setAccountData(null);
+          }
+          return;
+        }
+        if (!cancelled) setAccountData(data);
+      } catch {
+        if (!cancelled) {
+          setAccountError(t("hero.account.loadError"));
+          setAccountData(null);
+        }
+      } finally {
+        if (!cancelled) setAccountLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [shipperTab, effectiveIsLoggedIn, t]);
+
+  useEffect(() => {
+    if (!accountData) return;
+    setAccountSaveError(null);
+    setAccountSaveSuccess(false);
+    if (accountData.role === "COMPANY" && accountData.companyProfile) {
+      const p = accountData.companyProfile;
+      setCoCompanyName(p.companyName);
+      setCoContactPerson(p.contactPerson);
+      setCoPhone(p.phone);
+      setCoAddress(p.address ?? "");
+      setCoCity(p.city ?? "");
+      setCoCommercialRegister(p.commercialRegister ?? "");
+      setCoEmail(accountData.email);
+    }
+    setAccountCurrentPassword("");
+    setAccountNewPassword("");
+  }, [accountData]);
+
+  const mapAccountPatchError = (code: string | undefined) => {
+    const key = `accountForm.errors.${code ?? "GENERIC"}`;
+    const msg = t(key);
+    return msg === key ? t("accountForm.errors.GENERIC") : msg;
+  };
+
+  const saveCompanyAccount = async () => {
+    if (!accountData || accountData.role !== "COMPANY" || !accountData.companyProfile) return;
+    setAccountSaveLoading(true);
+    setAccountSaveError(null);
+    setAccountSaveSuccess(false);
+    try {
+      const res = await fetch("/api/account", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companyName: coCompanyName.trim(),
+          contactPerson: coContactPerson.trim(),
+          phone: coPhone.trim(),
+          address: coAddress.trim() || null,
+          city: coCity.trim() || null,
+          commercialRegister: coCommercialRegister.trim() || null,
+          email: coEmail.trim(),
+          currentPassword: accountCurrentPassword || undefined,
+          newPassword: accountNewPassword || undefined,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok) {
+        setAccountSaveError(mapAccountPatchError(data.error));
+        return;
+      }
+      setAccountSaveSuccess(true);
+      setAccountCurrentPassword("");
+      setAccountNewPassword("");
+      await updateSession({
+        email: coEmail.trim(),
+        name: coContactPerson.trim(),
+      });
+      const res2 = await fetch("/api/account");
+      const data2 = (await res2.json().catch(() => ({}))) as HeroAccountData & { error?: string };
+      if (res2.ok) setAccountData(data2);
+    } catch {
+      setAccountSaveError(t("accountForm.errors.GENERIC"));
+    } finally {
+      setAccountSaveLoading(false);
+    }
+  };
 
   const distanceKm = useMemo(() => {
     if (!fromLoc || !toLoc) return null;
@@ -689,12 +823,12 @@ export function HeroSection({
             <Link href="/" className="flex shrink-0 items-center gap-1.5 sm:gap-2">
               <Image
                 src="/logo.png"
-                alt="hawai Logisti"
+                alt="Hawai Logisti"
                 width={48}
                 height={48}
                 className="object-contain h-9 w-9 sm:h-12 sm:w-12"
               />
-              <span className="text-xl font-bold text-white hidden sm:inline">hawai Logisti</span>
+              <span className="text-xl font-bold text-white hidden sm:inline">Hawai Logisti</span>
             </Link>
             <nav
               className="hidden min-w-0 md:flex md:flex-wrap md:items-center md:gap-x-4 md:gap-y-1 lg:gap-x-5 text-sm text-white/90"
@@ -805,7 +939,7 @@ export function HeroSection({
             <div className="flex items-start justify-between gap-4 mb-4">
               <div className="min-w-0">
                 <h3 className="text-lg sm:text-xl font-bold text-foreground">{t("hero.panelTitle")}</h3>
-                <div className="mt-2 inline-flex rounded-lg border border-border bg-muted/20 p-1">
+                <div className="mt-2 inline-flex flex-wrap gap-1 rounded-lg border border-border bg-muted/20 p-1">
                   <button
                     type="button"
                     onClick={() => setShipperTab("create")}
@@ -827,6 +961,17 @@ export function HeroSection({
                     }`}
                   >
                     {t("hero.tabTrack")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShipperTab("account")}
+                    className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                      shipperTab === "account"
+                        ? "bg-white text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {t("hero.tabAccount")}
                   </button>
                 </div>
               </div>
@@ -1024,7 +1169,7 @@ export function HeroSection({
               </div>
                 </div>
               </div>
-            ) : (
+            ) : shipperTab === "track" ? (
               <div className="space-y-3">
                 {canShip ? (
                   <div className="rounded-lg border border-border bg-muted/20 p-3">
@@ -1242,6 +1387,247 @@ export function HeroSection({
                 {submitResult?.ok && submitResult.id ? (
                   <CopyableRequestId id={submitResult.id} compact />
                 ) : null}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {!effectiveIsLoggedIn ? (
+                  <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
+                    <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                      {t("hero.account.guestIntro")}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        href="/login"
+                        className="inline-flex h-10 items-center justify-center rounded-lg border-2 border-border px-4 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                      >
+                        {t("common.login")}
+                      </Link>
+                      <Link
+                        href="/register"
+                        className="inline-flex h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+                      >
+                        {t("footer.register")}
+                      </Link>
+                    </div>
+                  </div>
+                ) : accountLoading ? (
+                  <p className="text-sm text-muted-foreground">{t("hero.account.loading")}</p>
+                ) : accountError ? (
+                  <p className="text-sm text-red-700">{accountError}</p>
+                ) : accountData ? (
+                  <div className="rounded-xl border border-border bg-card p-4 sm:p-5 space-y-4">
+                    {accountData.role === "COMPANY" && accountData.companyProfile ? (
+                      <form
+                        className="space-y-4"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          void saveCompanyAccount();
+                        }}
+                      >
+                        <div className="space-y-1.5">
+                          <label className="text-sm font-medium text-foreground" htmlFor="hero-co-email">
+                            {t("hero.account.email")}
+                          </label>
+                          <input
+                            id="hero-co-email"
+                            type="email"
+                            autoComplete="email"
+                            value={coEmail}
+                            onChange={(e) => setCoEmail(e.target.value)}
+                            className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 text-right text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                            dir="ltr"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-xs font-medium text-muted-foreground">{t("hero.account.role")}</div>
+                          <div className="text-sm text-foreground">
+                            {(() => {
+                              const rk = `hero.account.roles.${accountData.role}`;
+                              const rl = t(rk);
+                              return rl !== rk ? rl : accountData.role;
+                            })()}
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-sm font-medium text-foreground" htmlFor="hero-co-company">
+                            {t("hero.account.companyName")}
+                          </label>
+                          <input
+                            id="hero-co-company"
+                            value={coCompanyName}
+                            onChange={(e) => setCoCompanyName(e.target.value)}
+                            required
+                            className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-sm font-medium text-foreground" htmlFor="hero-co-contact">
+                            {t("hero.account.contactPerson")}
+                          </label>
+                          <input
+                            id="hero-co-contact"
+                            value={coContactPerson}
+                            onChange={(e) => setCoContactPerson(e.target.value)}
+                            required
+                            className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-sm font-medium text-foreground" htmlFor="hero-co-phone">
+                            {t("hero.account.phone")}
+                          </label>
+                          <input
+                            id="hero-co-phone"
+                            value={coPhone}
+                            onChange={(e) => setCoPhone(e.target.value)}
+                            required
+                            dir="ltr"
+                            className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 text-right text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-sm font-medium text-foreground" htmlFor="hero-co-address">
+                            {t("hero.account.address")}
+                          </label>
+                          <input
+                            id="hero-co-address"
+                            value={coAddress}
+                            onChange={(e) => setCoAddress(e.target.value)}
+                            className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-sm font-medium text-foreground" htmlFor="hero-co-city">
+                            {t("hero.account.city")}
+                          </label>
+                          <input
+                            id="hero-co-city"
+                            value={coCity}
+                            onChange={(e) => setCoCity(e.target.value)}
+                            className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-sm font-medium text-foreground" htmlFor="hero-co-cr">
+                            {t("hero.account.commercialRegister")}
+                          </label>
+                          <input
+                            id="hero-co-cr"
+                            value={coCommercialRegister}
+                            onChange={(e) => setCoCommercialRegister(e.target.value)}
+                            dir="ltr"
+                            className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                          />
+                        </div>
+                        <div className="space-y-3 border-t border-border pt-4">
+                          <p className="text-xs text-muted-foreground leading-snug">{t("accountForm.passwordHint")}</p>
+                          <div className="space-y-1.5">
+                            <label className="text-sm font-medium text-foreground" htmlFor="hero-co-cur-pw">
+                              {t("accountForm.currentPassword")}
+                            </label>
+                            <input
+                              id="hero-co-cur-pw"
+                              type="password"
+                              autoComplete="current-password"
+                              value={accountCurrentPassword}
+                              onChange={(e) => setAccountCurrentPassword(e.target.value)}
+                              className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-sm font-medium text-foreground" htmlFor="hero-co-new-pw">
+                              {t("accountForm.newPassword")}
+                            </label>
+                            <input
+                              id="hero-co-new-pw"
+                              type="password"
+                              autoComplete="new-password"
+                              value={accountNewPassword}
+                              onChange={(e) => setAccountNewPassword(e.target.value)}
+                              className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                            />
+                          </div>
+                        </div>
+                        {accountSaveError ? (
+                          <p className="text-sm text-red-700">{accountSaveError}</p>
+                        ) : null}
+                        {accountSaveSuccess ? (
+                          <p className="text-sm text-green-800 bg-green-50 rounded-lg px-3 py-2">{t("accountForm.success")}</p>
+                        ) : null}
+                        <button
+                          type="submit"
+                          disabled={accountSaveLoading}
+                          className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-70 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {accountSaveLoading ? t("accountForm.saving") : t("accountForm.save")}
+                        </button>
+                      </form>
+                    ) : (
+                      <>
+                    {accountData.name ? (
+                      <div className="space-y-1">
+                        <div className="text-xs font-medium text-muted-foreground">{t("hero.account.name")}</div>
+                        <div className="text-sm text-foreground break-words">{accountData.name}</div>
+                      </div>
+                    ) : null}
+                    <div className="space-y-1">
+                      <div className="text-xs font-medium text-muted-foreground">{t("hero.account.email")}</div>
+                      <div className="text-sm text-foreground break-all">{accountData.email}</div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-xs font-medium text-muted-foreground">{t("hero.account.role")}</div>
+                      <div className="text-sm text-foreground">
+                        {(() => {
+                          const rk = `hero.account.roles.${accountData.role}`;
+                          const rl = t(rk);
+                          return rl !== rk ? rl : accountData.role;
+                        })()}
+                      </div>
+                    </div>
+                    {accountData.role === "DRIVER" && accountData.driverProfile ? (
+                      <>
+                        <div className="space-y-1">
+                          <div className="text-xs font-medium text-muted-foreground">
+                            {t("hero.account.driverFullName")}
+                          </div>
+                          <div className="text-sm text-foreground break-words">
+                            {accountData.driverProfile.fullName}
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-xs font-medium text-muted-foreground">{t("hero.account.phone")}</div>
+                          <div className="text-sm text-foreground break-words" dir="ltr">
+                            {accountData.driverProfile.phone}
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-xs font-medium text-muted-foreground">
+                            {t("hero.account.driverCarPlate")}
+                          </div>
+                          <div className="text-sm text-foreground break-words" dir="ltr">
+                            {accountData.driverProfile.carPlate ?? "—"}
+                          </div>
+                        </div>
+                      </>
+                    ) : null}
+                    {(effectiveUserRole === "DRIVER" || effectiveUserRole === "ADMIN") && (
+                      <Link
+                        href={
+                          effectiveUserRole === "DRIVER"
+                            ? "/dashboard/client/account"
+                            : "/dashboard/admin/account"
+                        }
+                        className="inline-flex h-10 items-center justify-center rounded-lg border-2 border-border px-4 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                      >
+                        {t("hero.account.manageAccount")}
+                      </Link>
+                    )}
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">{t("hero.account.loadError")}</p>
+                )}
               </div>
             )}
 

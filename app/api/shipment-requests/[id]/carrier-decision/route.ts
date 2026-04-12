@@ -28,6 +28,17 @@ export async function POST(
       return NextResponse.json({ error: "الطلب غير موجود" }, { status: 404 });
     }
 
+    const driverInvites = await prisma.shipmentRequestInvitee.findMany({
+      where: { shipmentRequestId: id, kind: "DRIVER" },
+      select: { targetId: true },
+    });
+    if (driverInvites.length > 0) {
+      const allowed = driverInvites.some((r) => r.targetId === session.user.id);
+      if (!allowed) {
+        return NextResponse.json({ error: "غير مصرح لك بالرد على هذا الطلب" }, { status: 403 });
+      }
+    }
+
     const safeRequestSelect = {
       id: true,
       status: true,
@@ -39,14 +50,19 @@ export async function POST(
       if (existing.status !== "PENDING_CARRIER") {
         return NextResponse.json({ error: "لا يمكن قبول هذا الطلب" }, { status: 400 });
       }
-      const updated = await prisma.shipmentRequest.update({
-        where: { id },
-        data: {
-          status: "CARRIER_ACCEPTED",
-          carrierId: session.user.id,
-          carrierDecisionAt: new Date(),
-        },
-        select: safeRequestSelect,
+      const updated = await prisma.$transaction(async (tx) => {
+        const u = await tx.shipmentRequest.update({
+          where: { id },
+          data: {
+            status: "CARRIER_ACCEPTED",
+            carrierId: session.user.id,
+            carrierDecisionAt: new Date(),
+            carrierSelfSubmittedDecision: true,
+          },
+          select: safeRequestSelect,
+        });
+        await tx.shipmentRequestInvitee.deleteMany({ where: { shipmentRequestId: id } });
+        return u;
       });
       return NextResponse.json({ ok: true, request: updated });
     }
@@ -55,14 +71,19 @@ export async function POST(
     if (existing.status !== "PENDING_CARRIER") {
       return NextResponse.json({ error: "لا يمكن رفض هذا الطلب" }, { status: 400 });
     }
-    const updated = await prisma.shipmentRequest.update({
-      where: { id },
-      data: {
-        status: "CARRIER_REFUSED",
-        carrierId: session.user.id,
-        carrierDecisionAt: new Date(),
-      },
-      select: safeRequestSelect,
+    const updated = await prisma.$transaction(async (tx) => {
+      const u = await tx.shipmentRequest.update({
+        where: { id },
+        data: {
+          status: "CARRIER_REFUSED",
+          carrierId: session.user.id,
+          carrierDecisionAt: new Date(),
+          carrierSelfSubmittedDecision: true,
+        },
+        select: safeRequestSelect,
+      });
+      await tx.shipmentRequestInvitee.deleteMany({ where: { shipmentRequestId: id } });
+      return u;
     });
     return NextResponse.json({ ok: true, request: updated });
   } catch (e) {

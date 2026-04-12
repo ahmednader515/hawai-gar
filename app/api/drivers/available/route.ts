@@ -21,6 +21,7 @@ export async function GET(req: Request) {
   const drivers = await prisma.user.findMany({
     where: {
       role: "DRIVER",
+      blacklistedAt: null,
       driverProfile: { isNot: null },
     },
     select: {

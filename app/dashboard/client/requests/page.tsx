@@ -1,5 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { getCarrierAckVariant } from "@/lib/carrier-ack-variant";
+import { shipmentRequestVisibleToDriverWhere } from "@/lib/shipment-request-driver-visibility";
 import { ClientRequestsPageContent } from "./client-requests-page-content";
 
 type RequestOrderRow = {
@@ -20,6 +22,7 @@ export default async function ClientRequestsPage() {
       status: {
         notIn: ["ADMIN_APPROVED", "AWAITING_PAYMENT_APPROVAL", "COMPLETE", "ADMIN_REJECTED"],
       },
+      AND: [shipmentRequestVisibleToDriverWhere(session.user.id)],
     },
     orderBy: { createdAt: "desc" },
     take: 50,
@@ -53,9 +56,19 @@ export default async function ClientRequestsPage() {
 
   const rows = orders as unknown as RequestOrderRow[];
 
+  const userId = session.user.id;
+
   const shipments = shipmentRequests.map((r) => ({
     id: r.id,
     status: r.status,
+    carrierId: r.carrierId,
+    carrierSelfSubmittedDecision: r.carrierSelfSubmittedDecision,
+    carrierAckVariant: getCarrierAckVariant(
+      r.carrierId,
+      userId,
+      r.status,
+      r.carrierSelfSubmittedDecision,
+    ),
     createdAt: r.createdAt.toISOString(),
     fromText: r.fromText,
     toText: r.toText,
@@ -86,6 +99,7 @@ export default async function ClientRequestsPage() {
 
   return (
     <ClientRequestsPageContent
+      currentUserId={session.user.id}
       priceChangedApprovedCount={priceChangedApprovedCount}
       shipments={shipments}
       legacyOrders={legacyOrders}
