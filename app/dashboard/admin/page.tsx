@@ -104,6 +104,9 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="w-full min-w-0 max-w-full overflow-hidden">
+      <p className="text-xs font-medium text-muted-foreground mb-1">
+        {t("dashboard.admin.adminWelcome")}
+      </p>
       <h1 className="text-2xl font-bold mb-2 break-words">{t("dashboard.admin.shipmentRequestsTitle")}</h1>
       <p className="text-muted-foreground mb-6 text-sm md:text-base">
         {t("dashboard.admin.shipmentRequestsSubtitle")}

@@ -9,11 +9,13 @@ import { useI18n } from "@/components/providers/i18n-provider";
 import { TRUCK_SIZE_OPTIONS, TRUCK_TYPE_OPTIONS_BY_SIZE } from "@/lib/truck-options";
 import { TagInput } from "@/components/tag-input";
 import { serializeTagList } from "@/lib/catalog-tags";
+import { PhoneInput } from "@/components/phone-input";
 
 const inputClass =
   "h-11 bg-sky-50/80 dark:bg-sky-950/20 border-gray-200 focus:ring-primary/30 focus:border-primary";
 const btnPrimary =
   "inline-flex h-11 min-h-11 items-center justify-center rounded-lg bg-primary px-5 py-2 sm:px-6 hover:bg-primary/90 text-primary-foreground text-sm font-semibold transition-colors disabled:opacity-70 disabled:cursor-not-allowed";
+const phoneSelectClass = "border-gray-200 bg-sky-50/80 dark:bg-sky-950/20";
 
 type Role = "COMPANY" | "DRIVER";
 
@@ -426,12 +428,13 @@ export function RegisterForm({ forcedRole }: { forcedRole?: Role }) {
             </div>
             <div className="space-y-2">
               <Label>{t("registerForm.phone")}</Label>
-              <Input
+              <PhoneInput
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={setPhone}
                 required
-                placeholder={t("registerForm.placeholders.phone")}
-                className={inputClass}
+                locale={locale}
+                selectClassName={phoneSelectClass}
+                inputClassName={inputClass}
               />
             </div>
             <div className="space-y-2">
@@ -490,12 +493,13 @@ export function RegisterForm({ forcedRole }: { forcedRole?: Role }) {
             </div>
             <div className="space-y-2">
               <Label>{t("registerForm.phone")}</Label>
-              <Input
+              <PhoneInput
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={setPhone}
                 required
-                placeholder={t("registerForm.placeholders.phone")}
-                className={inputClass}
+                locale={locale}
+                selectClassName={phoneSelectClass}
+                inputClassName={inputClass}
               />
             </div>
             <div className="space-y-2">

@@ -17,6 +17,19 @@ export const ourFileRouter = {
     .onUploadComplete(async ({ file }) => {
       return { ufsUrl: file.ufsUrl };
     }),
+  unloadPermitProof: f({
+    image: { maxFileSize: "4MB", maxFileCount: 1 },
+  })
+    .middleware(async () => {
+      const session = await auth();
+      if (!session?.user?.id || session.user.role !== "COMPANY") {
+        throw new Error("Unauthorized");
+      }
+      return { userId: session.user.id };
+    })
+    .onUploadComplete(async ({ file }) => {
+      return { ufsUrl: file.ufsUrl };
+    }),
 } satisfies FileRouter;
 
 export type OurFileRouter = typeof ourFileRouter;

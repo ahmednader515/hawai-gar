@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { UserRole } from "@prisma/client";
 import { parseTagList } from "@/lib/catalog-tags";
+import { normalizeAndValidateE164 } from "@/lib/phone";
 
 function str(v: unknown, fallback = ""): string {
   if (v == null) return fallback;
@@ -84,6 +85,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (!companyName || !contactPerson || !phone) {
       return NextResponse.json({ error: "VALIDATION" }, { status: 400 });
     }
+    const phoneCheck = normalizeAndValidateE164(phone);
+    if (!phoneCheck.ok) {
+      return NextResponse.json({ error: "VALIDATION" }, { status: 400 });
+    }
 
     await prisma.$transaction([
       prisma.user.update({
@@ -99,7 +104,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         data: {
           companyName,
           contactPerson,
-          phone,
+          phone: phoneCheck.e164,
           address: address === undefined ? undefined : address,
           city: city === undefined ? undefined : city,
           commercialRegister: commercialRegister === undefined ? undefined : commercialRegister,
@@ -143,6 +148,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   ) {
     return NextResponse.json({ error: "VALIDATION" }, { status: 400 });
   }
+  const phoneCheck = normalizeAndValidateE164(phone);
+  if (!phoneCheck.ok) {
+    return NextResponse.json({ error: "VALIDATION" }, { status: 400 });
+  }
 
   await prisma.$transaction([
     prisma.user.update({
@@ -157,7 +166,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       where: { userId: target.id },
       data: {
         fullName,
-        phone,
+        phone: phoneCheck.e164,
         carType,
         carCapacity,
         listingCompanyName,

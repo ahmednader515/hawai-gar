@@ -49,6 +49,8 @@ export async function GET(req: Request) {
         adminDecisionAt: true,
         invoiceLink: true,
         invoiceImageUrl: true,
+        unloadPermitRequired: true,
+        unloadPermitImageUrl: true,
         shipmentCompany: {
           select: {
             id: true,
@@ -93,6 +95,8 @@ export async function GET(req: Request) {
       adminDecisionAt: r.adminDecisionAt,
       invoiceLink: r.invoiceLink,
       invoiceImageUrl: r.invoiceImageUrl,
+      unloadPermitRequired: r.unloadPermitRequired,
+      unloadPermitImageUrl: r.unloadPermitImageUrl,
       shipmentCompany: r.shipmentCompany,
     });
   } catch (e) {

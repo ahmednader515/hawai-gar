@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/providers/i18n-provider";
 import type { DriverProfile } from "@prisma/client";
 import { TagInput } from "@/components/tag-input";
+import { PhoneInput } from "@/components/phone-input";
 import {
   initialDestinationTagsFromCarrier,
   initialTruckTagsFromCarrier,
@@ -44,7 +45,7 @@ type Props =
     };
 
 export function AccountSettingsForm(props: Props) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const { update } = useSession();
 
@@ -204,13 +205,15 @@ export function AccountSettingsForm(props: Props) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="phone">{t("accountForm.phone")}</Label>
-            <Input
+            <PhoneInput
               id="phone"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={setPhone}
               required
               disabled={loading}
-              className="h-11"
+              locale={locale}
+              inputClassName="h-11"
+              selectClassName="h-11"
             />
           </div>
           <div className="space-y-2">

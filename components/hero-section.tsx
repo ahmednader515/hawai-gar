@@ -15,6 +15,8 @@ import { signIn, signOut, useSession } from "next-auth/react";
 import { CopyableRequestId } from "@/components/copyable-request-id";
 import { TRUCK_SIZE_OPTIONS, TRUCK_TYPE_OPTIONS_BY_SIZE, type TruckOption } from "@/lib/truck-options";
 import { DEFAULT_MULTIPLIER, DEFAULT_SAR_PER_KM } from "@/lib/shipment-pricing-constants";
+import { computeShipmentEstimateSar, type ShipmentPricingSettingsCore as ShipmentPricingSettings } from "@/lib/shipment-pricing-core";
+import { PhoneInput } from "@/components/phone-input";
 
 /** Mapbox + geocoder are large; load only when the shipper panel or track map is shown */
 const MapboxLocationPicker = dynamic(
@@ -46,6 +48,14 @@ const CompanyInvoiceProofUpload = dynamic(
   },
 );
 
+const CompanyUnloadPermitUpload = dynamic(
+  () => import("@/components/company-unload-permit-upload").then((m) => m.CompanyUnloadPermitUpload),
+  {
+    ssr: false,
+    loading: () => <div className="min-h-[5rem] animate-pulse rounded-lg bg-muted" aria-hidden />,
+  },
+);
+
 const MAIN_NAV_LINK_DEFS: { href: string; labelKey: string; className?: string }[] = [
   { href: "/", labelKey: "nav.public.home" },
   { href: "/#solutions", labelKey: "nav.public.solutions" },
@@ -68,6 +78,7 @@ type ShipmentPayload = {
   pickupDate: string;
   notes: string | null;
   phone: string;
+  unloadPermitRequired: boolean;
 };
 
 type MyShipmentRequestItem = {
@@ -77,6 +88,33 @@ type MyShipmentRequestItem = {
   status: string;
   createdAt: string;
 };
+
+type TrackingData = {
+  id?: string | number;
+  status?: string;
+  statusLabel?: string;
+  from?: string;
+  to?: string;
+  distanceKm?: number;
+  priceSar?: number;
+  estimatedPriceSar?: number;
+  adminPriceChanged?: boolean;
+  adminPriceChangeNotice?: string | null;
+  invoiceLink?: string | null;
+  invoiceImageUrl?: string | null;
+  unloadPermitRequired?: boolean;
+  unloadPermitImageUrl?: string | null;
+  createdAt?: string | number;
+  fromLat?: number | null;
+  fromLng?: number | null;
+  toLat?: number | null;
+  toLng?: number | null;
+} & Record<string, unknown>;
+
+type TrackingResult =
+  | null
+  | { ok: true; data: TrackingData }
+  | { ok: false; error: string };
 
 type HeroAccountData = {
   name: string | null;
@@ -137,6 +175,7 @@ export function HeroSection({
   const [pickupDate, setPickupDate] = useState("");
   const [notes, setNotes] = useState("");
   const [shipperPhone, setShipperPhone] = useState("");
+  const [unloadPermitRequired, setUnloadPermitRequired] = useState<boolean | null>(null);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitResult, setSubmitResult] = useState<null | { ok: true; id: string } | { ok: false; error: string }>(
     null
@@ -160,7 +199,7 @@ export function HeroSection({
   const [locationLocked, setLocationLocked] = useState(false);
   const [trackingId, setTrackingId] = useState("");
   const [trackingLoading, setTrackingLoading] = useState(false);
-  const [trackingResult, setTrackingResult] = useState<any>(null);
+  const [trackingResult, setTrackingResult] = useState<TrackingResult>(null);
   const [myRequestsLoading, setMyRequestsLoading] = useState(false);
   const [myRequestsError, setMyRequestsError] = useState<string | null>(null);
   const [myRequests, setMyRequests] = useState<MyShipmentRequestItem[]>([]);
@@ -180,10 +219,12 @@ export function HeroSection({
   const [codeVerifyLoading, setCodeVerifyLoading] = useState(false);
   const [otpResendLoading, setOtpResendLoading] = useState(false);
 
-  const [pricingSettings, setPricingSettings] = useState({
+  const [pricingSettings, setPricingSettings] = useState<ShipmentPricingSettings>({
     sarPerKm: DEFAULT_SAR_PER_KM,
     multiplier: DEFAULT_MULTIPLIER,
-    detailsNote: null as string | null,
+    distanceMultiplier: 1,
+    detailsNote: null,
+    modifiers: { shipmentType: {}, truckSize: {}, truckType: {} },
   });
 
   useEffect(() => {
@@ -202,10 +243,18 @@ export function HeroSection({
             typeof data.multiplier === "number" && Number.isFinite(data.multiplier)
               ? data.multiplier
               : DEFAULT_MULTIPLIER,
+          distanceMultiplier:
+            typeof data.distanceMultiplier === "number" && Number.isFinite(data.distanceMultiplier) && data.distanceMultiplier > 0
+              ? data.distanceMultiplier
+              : 1,
           detailsNote:
             typeof data.detailsNote === "string" && data.detailsNote.trim()
               ? data.detailsNote.trim()
               : null,
+          modifiers:
+            data && typeof data === "object" && typeof (data as any).modifiers === "object"
+              ? ((data as any).modifiers as ShipmentPricingSettings["modifiers"])
+              : { shipmentType: {}, truckSize: {}, truckType: {} },
         });
       } catch {
         /* keep defaults */
@@ -394,8 +443,12 @@ export function HeroSection({
 
   const priceSar = useMemo(() => {
     if (distanceKm == null) return null;
-    return distanceKm * pricingSettings.sarPerKm * pricingSettings.multiplier;
-  }, [distanceKm, pricingSettings.sarPerKm, pricingSettings.multiplier]);
+    return computeShipmentEstimateSar(distanceKm, pricingSettings, {
+      shipmentType: shipmentType || null,
+      truckSize: truckSize || null,
+      truckType: truckType || null,
+    });
+  }, [distanceKm, pricingSettings, shipmentType, truckSize, truckType]);
 
   const priceLabel = useMemo(() => {
     if (priceSar == null) return "—";
@@ -444,6 +497,7 @@ export function HeroSection({
     setPickupDate("");
     setNotes("");
     setShipperPhone("");
+    setUnloadPermitRequired(null);
     setLocationLocked(false);
   };
 
@@ -502,6 +556,10 @@ export function HeroSection({
       setSubmitResult({ ok: false, error: t("hero.errors.phone") });
       return;
     }
+    if (unloadPermitRequired == null) {
+      setSubmitResult({ ok: false, error: t("hero.errors.unloadPermitRequired") });
+      return;
+    }
     if (priceSar == null || distanceKm == null) {
       setSubmitResult({ ok: false, error: t("hero.errors.priceDistance") });
       return;
@@ -519,6 +577,7 @@ export function HeroSection({
       pickupDate,
       notes: notes.trim() || null,
       phone: shipperPhone.trim(),
+      unloadPermitRequired,
     };
 
     if (!canShip) {
@@ -939,7 +998,7 @@ export function HeroSection({
             <div className="flex items-start justify-between gap-4 mb-4">
               <div className="min-w-0">
                 <h3 className="text-lg sm:text-xl font-bold text-foreground">{t("hero.panelTitle")}</h3>
-                <div className="mt-2 inline-flex flex-wrap gap-1 rounded-lg border border-border bg-muted/20 p-1">
+                <div className="mt-2 grid grid-cols-3 gap-1 rounded-lg border border-border bg-muted/20 p-1 sm:inline-flex sm:flex-wrap">
                   <button
                     type="button"
                     onClick={() => setShipperTab("create")}
@@ -1159,13 +1218,43 @@ export function HeroSection({
               </div>
               <div className="space-y-1.5 sm:col-span-2">
                 <label className="text-sm font-medium text-foreground">{t("hero.contactPhone")}</label>
-                <input
+                <PhoneInput
                   value={shipperPhone}
-                  onChange={(e) => setShipperPhone(e.target.value)}
-                  placeholder={t("hero.contactPhonePlaceholder")}
+                  onChange={setShipperPhone}
                   required
-                  className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  locale={locale}
+                  placeholder={t("hero.contactPhonePlaceholder")}
+                  className="w-full"
+                  selectClassName="h-11"
+                  inputClassName="h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus-visible:ring-primary/30 focus-visible:border-primary"
                 />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <label className="text-sm font-medium text-foreground">{t("hero.unloadPermitQuestion")}</label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setUnloadPermitRequired(true)}
+                    className={`h-10 min-h-10 rounded-lg border px-4 text-sm font-semibold transition-colors ${
+                      unloadPermitRequired === true
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-gray-200 bg-gray-50 text-foreground hover:bg-gray-100"
+                    }`}
+                  >
+                    {t("hero.yes")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUnloadPermitRequired(false)}
+                    className={`h-10 min-h-10 rounded-lg border px-4 text-sm font-semibold transition-colors ${
+                      unloadPermitRequired === false
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-gray-200 bg-gray-50 text-foreground hover:bg-gray-100"
+                    }`}
+                  >
+                    {t("hero.no")}
+                  </button>
+                </div>
               </div>
                 </div>
               </div>
@@ -1347,11 +1436,24 @@ export function HeroSection({
                               }
                             />
                           )}
+                        {effectiveUserRole === "COMPANY" &&
+                          trackingResult.data?.id != null &&
+                          trackingResult.data?.unloadPermitRequired === true &&
+                          String(trackingResult.data.status) === "AWAITING_PAYMENT_APPROVAL" &&
+                          (trackingResult.data as { invoiceImageUrl?: string | null })?.invoiceImageUrl && (
+                            <CompanyUnloadPermitUpload
+                              requestId={String(trackingResult.data.id)}
+                              initialImageUrl={trackingResult.data.unloadPermitImageUrl ?? null}
+                              onSaved={() => void trackShipmentRequest(String(trackingResult.data.id))}
+                            />
+                          )}
                         <div className="text-sm opacity-90">
                           {t("hero.createdAt")}:{" "}
-                          {new Date(trackingResult.data.createdAt).toLocaleString(
-                            locale === "ar" ? AR_LOCALE_LATN : "en-GB",
-                          )}
+                          {trackingResult.data.createdAt != null
+                            ? new Date(trackingResult.data.createdAt).toLocaleString(
+                                locale === "ar" ? AR_LOCALE_LATN : "en-GB",
+                              )
+                            : "—"}
                         </div>
 
                         {trackingResult.data?.fromLat != null &&
@@ -1476,13 +1578,15 @@ export function HeroSection({
                           <label className="text-sm font-medium text-foreground" htmlFor="hero-co-phone">
                             {t("hero.account.phone")}
                           </label>
-                          <input
+                          <PhoneInput
                             id="hero-co-phone"
                             value={coPhone}
-                            onChange={(e) => setCoPhone(e.target.value)}
+                            onChange={setCoPhone}
                             required
-                            dir="ltr"
-                            className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 text-right text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                            locale={locale}
+                            className="w-full"
+                            selectClassName="h-11"
+                            inputClassName="h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 text-right text-foreground focus-visible:ring-primary/30 focus-visible:border-primary"
                           />
                         </div>
                         <div className="space-y-1.5">
@@ -1799,11 +1903,15 @@ export function HeroSection({
                 </div>
                 <div className="space-y-1.5 sm:col-span-2">
                   <label className="text-sm font-medium text-foreground">{t("registerForm.phone")}</label>
-                  <input
+                  <PhoneInput
                     value={guestPhone}
-                    onChange={(e) => setGuestPhone(e.target.value)}
+                    onChange={setGuestPhone}
+                    required
+                    locale={locale}
                     placeholder={t("registerForm.placeholders.phone")}
-                    className="w-full h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                    className="w-full"
+                    selectClassName="h-11"
+                    inputClassName="h-11 rounded-lg border border-gray-200 bg-gray-50 px-3 focus-visible:ring-primary/30 focus-visible:border-primary"
                   />
                 </div>
               </div>

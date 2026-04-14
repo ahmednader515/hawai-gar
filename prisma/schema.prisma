@@ -237,6 +237,10 @@ model ShipmentRequest {
   invoiceLink     String?
   /// Company-uploaded image of paid invoice / receipt (UploadThing URL).
   invoiceImageUrl String?
+  /// Whether the unloading location requires a permit document (set by company at request creation).
+  unloadPermitRequired Boolean @default(false)
+  /// Company-uploaded image of unloading permit (UploadThing URL).
+  unloadPermitImageUrl String?
   createdAt       DateTime @default(now())
 
   shipmentCompany ShipmentCompany? @relation(fields: [shipmentCompanyId], references: [id], onDelete: SetNull)

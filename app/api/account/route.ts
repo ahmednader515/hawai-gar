@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { UserRole } from "@prisma/client";
 import { parseTagList } from "@/lib/catalog-tags";
+import { normalizeAndValidateE164 } from "@/lib/phone";
 
 export async function GET() {
   try {
@@ -159,6 +160,10 @@ export async function PATCH(req: Request) {
       if (!companyName || !contactPerson || !phone) {
         return NextResponse.json({ error: "VALIDATION" }, { status: 400 });
       }
+      const phoneCheck = normalizeAndValidateE164(phone);
+      if (!phoneCheck.ok) {
+        return NextResponse.json({ error: "VALIDATION" }, { status: 400 });
+      }
 
       await prisma.$transaction([
         prisma.user.update({
@@ -174,7 +179,7 @@ export async function PATCH(req: Request) {
           data: {
             companyName,
             contactPerson,
-            phone,
+            phone: phoneCheck.e164,
             address,
             city,
             commercialRegister,
@@ -265,6 +270,10 @@ export async function PATCH(req: Request) {
     if (!fullName || !phone || !carType || !carCapacity) {
       return NextResponse.json({ error: "VALIDATION" }, { status: 400 });
     }
+    const phoneCheck = normalizeAndValidateE164(phone);
+    if (!phoneCheck.ok) {
+      return NextResponse.json({ error: "VALIDATION" }, { status: 400 });
+    }
 
     const dp = user.driverProfile;
     const strOr = (v: unknown, fallback: string) =>
@@ -318,7 +327,7 @@ export async function PATCH(req: Request) {
         where: { userId: user.id },
         data: {
           fullName,
-          phone,
+          phone: phoneCheck.e164,
           carType,
           carCapacity,
           listingCompanyName,

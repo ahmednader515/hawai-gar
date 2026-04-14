@@ -9,12 +9,14 @@ export async function GET() {
     return NextResponse.json({
       sarPerKm: s.sarPerKm,
       multiplier: s.multiplier,
+      distanceMultiplier: s.distanceMultiplier,
       detailsNote: s.detailsNote,
+      modifiers: s.modifiers,
     });
   } catch (e) {
     console.error(e);
     return NextResponse.json(
-      { sarPerKm: DEFAULT_SAR_PER_KM, multiplier: DEFAULT_MULTIPLIER, detailsNote: null },
+      { sarPerKm: DEFAULT_SAR_PER_KM, multiplier: DEFAULT_MULTIPLIER, distanceMultiplier: 1, detailsNote: null, modifiers: { shipmentType: {}, truckSize: {}, truckType: {} } },
       { status: 200 }
     );
   }

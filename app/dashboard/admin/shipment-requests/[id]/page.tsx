@@ -112,6 +112,8 @@ export default async function AdminShipmentRequestDetailsPage({
       estimatedPriceSar: true,
       invoiceLink: true,
       invoiceImageUrl: true,
+      unloadPermitRequired: true,
+      unloadPermitImageUrl: true,
     },
   });
 
@@ -423,6 +425,9 @@ export default async function AdminShipmentRequestDetailsPage({
                     "—"
                   )}
                 </DetailField>
+                <DetailField label={t(`${da}.shipmentDetailUnloadPermitRequired`)}>
+                  {r.unloadPermitRequired ? t("hero.yes") : t("hero.no")}
+                </DetailField>
                 <DetailField label={t(`${da}.shipmentDetailFieldDistance`)}>
                   {typeof r.distanceKm === "number"
                     ? t(`${da}.shipmentDetailDistanceKm`).replace("{n}", r.distanceKm.toFixed(1))
@@ -449,6 +454,28 @@ export default async function AdminShipmentRequestDetailsPage({
                   <p className="mt-1.5 text-sm leading-relaxed text-foreground whitespace-pre-wrap">
                     {r.notes}
                   </p>
+                </div>
+              )}
+
+              {r.unloadPermitRequired && r.unloadPermitImageUrl && (
+                <div className="mt-4 rounded-lg border border-border bg-muted/20 px-3 py-3 space-y-2">
+                  <div className="text-xs font-medium text-muted-foreground">
+                    {t(`${da}.shipmentDetailUnloadPermitImage`)}
+                  </div>
+                  <a
+                    href={r.unloadPermitImageUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex text-xs font-medium text-primary underline underline-offset-2 break-all"
+                  >
+                    {t(`${da}.shipmentDetailUnloadPermitOpen`)}
+                  </a>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={r.unloadPermitImageUrl}
+                    alt=""
+                    className="max-h-56 w-full max-w-md rounded-md border object-contain"
+                  />
                 </div>
               )}
             </CardContent>
@@ -689,6 +716,8 @@ export default async function AdminShipmentRequestDetailsPage({
                 estimatedPriceSar={r.estimatedPriceSar ?? null}
                 invoiceLink={r.invoiceLink ?? null}
                 invoiceImageUrl={r.invoiceImageUrl ?? null}
+                unloadPermitRequired={r.unloadPermitRequired}
+                unloadPermitImageUrl={r.unloadPermitImageUrl ?? null}
                 assignedShipmentCompany={
                   assignedShipmentCompany
                     ? {

@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { HeroContactInfo } from "@/lib/site-settings";
 import { useI18n } from "@/components/providers/i18n-provider";
+import { PhoneInput } from "@/components/phone-input";
 
 export function HeroContactForm({ initial }: { initial: HeroContactInfo }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [email, setEmail] = useState(initial.email);
   const [phone, setPhone] = useState(initial.phone ?? "");
   const [saving, setSaving] = useState(false);
@@ -57,13 +58,15 @@ export function HeroContactForm({ initial }: { initial: HeroContactInfo }) {
       </div>
       <div className="space-y-2">
         <Label htmlFor="hero-phone">{t("dashboard.admin.contactFormPhoneLabel")}</Label>
-        <Input
+        <PhoneInput
           id="hero-phone"
-          type="tel"
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          onChange={setPhone}
+          locale={locale}
           placeholder={t("dashboard.admin.contactFormPhonePlaceholder")}
-          className="h-11"
+          className="w-full"
+          selectClassName="h-11"
+          inputClassName="h-11"
         />
       </div>
       {message && (

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { UserRole } from "@prisma/client";
 import { normalizeEmailKey } from "@/lib/email-verification";
 import { parseTagList } from "@/lib/catalog-tags";
+import { normalizeAndValidateE164 } from "@/lib/phone";
 
 export async function POST(req: Request) {
   try {
@@ -67,6 +68,10 @@ export async function POST(req: Request) {
           { status: 400 }
         );
       }
+      const phoneCheck = normalizeAndValidateE164(phone);
+      if (!phoneCheck.ok) {
+        return NextResponse.json({ error: "رقم الهاتف غير صالح" }, { status: 400 });
+      }
 
       const normalizedEmail = String(email).trim();
       const emailKey = normalizeEmailKey(normalizedEmail);
@@ -105,7 +110,7 @@ export async function POST(req: Request) {
               companyName: String(companyName),
               commercialRegister: commercialRegister ? String(commercialRegister) : null,
               contactPerson: String(contactPerson),
-              phone: String(phone),
+              phone: phoneCheck.e164,
               address: address ? String(address) : null,
               city: city ? String(city) : null,
             },
@@ -164,6 +169,10 @@ export async function POST(req: Request) {
           { status: 400 }
         );
       }
+      const phoneCheck = normalizeAndValidateE164(phone);
+      if (!phoneCheck.ok) {
+        return NextResponse.json({ error: "رقم الهاتف غير صالح" }, { status: 400 });
+      }
       if (!registrationPreVerified) {
         return NextResponse.json(
           { error: "يجب تأكيد البريد الإلكتروني برمز التحقق قبل إنشاء الحساب" },
@@ -197,7 +206,7 @@ export async function POST(req: Request) {
             data: {
               fullName: String(fullName),
               nationalId: null,
-              phone: String(phone),
+              phone: phoneCheck.e164,
               licenseNumber: null,
               carPlate: null,
               carType: String(carType),

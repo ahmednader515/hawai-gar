@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { allocateShipmentRequestId } from "@/lib/shipment-request-id";
 import { computeShipmentEstimateSar, getShipmentPricingSettings } from "@/lib/shipment-pricing";
+import { normalizeAndValidateE164 } from "@/lib/phone";
 
 function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
   const R = 6371; // km
@@ -42,6 +43,7 @@ export async function POST(req: Request) {
       pickupDate,
       notes,
       phone,
+      unloadPermitRequired,
     } = body ?? {};
 
     if (!from || !to) {
@@ -65,6 +67,10 @@ export async function POST(req: Request) {
     if (!phone) {
       return NextResponse.json({ error: "رقم التواصل مطلوب" }, { status: 400 });
     }
+    const phoneCheck = normalizeAndValidateE164(phone);
+    if (!phoneCheck.ok) {
+      return NextResponse.json({ error: "رقم التواصل غير صالح" }, { status: 400 });
+    }
 
     const fl = Number(fromLat);
     const fg = Number(fromLng);
@@ -75,7 +81,13 @@ export async function POST(req: Request) {
     const distanceKm = hasCoords ? haversineKm({ lat: fl, lng: fg }, { lat: tl, lng: tg }) : null;
     const pricing = await getShipmentPricingSettings();
     const priceSar =
-      distanceKm != null ? computeShipmentEstimateSar(distanceKm, pricing) : null;
+      distanceKm != null
+        ? computeShipmentEstimateSar(distanceKm, pricing, {
+            shipmentType: shipmentType ? String(shipmentType) : null,
+            truckSize: containerSize ? String(containerSize) : null,
+            truckType: containersCount ? String(containersCount) : null,
+          })
+        : null;
 
     const requestId = await allocateShipmentRequestId();
 
@@ -98,7 +110,8 @@ export async function POST(req: Request) {
         containersCount: containersCount ? String(containersCount) : null,
         pickupDate: pickupDate ? String(pickupDate) : null,
         notes: notes ? String(notes) : null,
-        phone: phone ? String(phone) : null,
+        phone: phoneCheck.e164,
+        unloadPermitRequired: Boolean(unloadPermitRequired),
         status: "PENDING_CARRIER",
       },
       select: { id: true },

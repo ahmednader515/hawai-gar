@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { useI18n } from "@/components/providers/i18n-provider";
 import type { CarrierRow, CompanyRow, ShipmentCompanyDirectoryRow } from "@/lib/admin-clients-types";
 import { TagInput } from "@/components/tag-input";
+import { PhoneInput } from "@/components/phone-input";
 import {
   initialDestinationTagsFromCarrier,
   initialTruckTagsFromCarrier,
@@ -213,7 +214,7 @@ export function CompanyUserActions({
   /** `card` renders a footer block for mobile; `table` renders a &lt;td&gt; for desktop. */
   uiVariant?: "table" | "card";
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const baseId = useId();
   const [editOpen, setEditOpen] = useState(false);
@@ -469,7 +470,15 @@ export function CompanyUserActions({
         </div>
         <div className="grid gap-2">
           <Label htmlFor={`${baseId}-ph`}>{t(`${da}.clientsColPhone`)}</Label>
-          <Input id={`${baseId}-ph`} value={phone} onChange={(e) => setPhone(e.target.value)} dir="ltr" />
+          <PhoneInput
+            id={`${baseId}-ph`}
+            value={phone}
+            onChange={setPhone}
+            required
+            locale={locale}
+            inputClassName="h-11"
+            selectClassName="h-11"
+          />
         </div>
         <div className="grid gap-2">
           <Label htmlFor={`${baseId}-city`}>{t(`${da}.clientsColCity`)}</Label>
@@ -511,7 +520,7 @@ export function DriverUserActions({
   listVariant: "active" | "blacklisted";
   uiVariant?: "table" | "card";
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const baseId = useId();
   const [editOpen, setEditOpen] = useState(false);
@@ -788,7 +797,15 @@ export function DriverUserActions({
         </div>
         <div className="grid gap-2">
           <Label htmlFor={`${baseId}-ph`}>{t(`${da}.clientsColPhone`)}</Label>
-          <Input id={`${baseId}-ph`} value={phone} onChange={(e) => setPhone(e.target.value)} dir="ltr" />
+          <PhoneInput
+            id={`${baseId}-ph`}
+            value={phone}
+            onChange={setPhone}
+            required
+            locale={locale}
+            inputClassName="h-11"
+            selectClassName="h-11"
+          />
         </div>
         <div className="grid gap-2">
           <Label htmlFor={`${baseId}-ct`}>{t(`${da}.clientsColCarType`)}</Label>
@@ -848,7 +865,7 @@ export function DirectoryCarrierActions({
   listVariant: "active" | "blacklisted";
   uiVariant?: "table" | "card";
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const baseId = useId();
   const [editOpen, setEditOpen] = useState(false);
@@ -1086,7 +1103,15 @@ export function DirectoryCarrierActions({
         </div>
         <div className="grid gap-2">
           <Label htmlFor={`${baseId}-ph`}>{t(`${da}.clientsColPhone`)}</Label>
-          <Input id={`${baseId}-ph`} value={phone} onChange={(e) => setPhone(e.target.value)} dir="ltr" />
+          <PhoneInput
+            id={`${baseId}-ph`}
+            value={phone}
+            onChange={setPhone}
+            required={listVariant === "active"}
+            locale={locale}
+            inputClassName="h-11"
+            selectClassName="h-11"
+          />
         </div>
         <div className="grid gap-2">
           <Label htmlFor={`${baseId}-tt`}>{t(`${da}.clientsColTruckTypes`)}</Label>

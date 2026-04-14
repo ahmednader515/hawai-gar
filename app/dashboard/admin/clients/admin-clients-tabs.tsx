@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
 import { CompanyUserActions, DirectoryCarrierActions, DriverUserActions } from "@/components/admin-clients-actions";
+import { DashboardListSearch } from "@/components/dashboard-list-search";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { AR_LOCALE_LATN } from "@/lib/locale";
 import {
@@ -60,6 +61,19 @@ function formatRegisteredAt(iso: string, locale: string) {
   return new Date(iso).toLocaleDateString(locale === "ar" ? AR_LOCALE_LATN : "en-GB", {
     dateStyle: "medium",
   });
+}
+
+function normalizeQuery(raw: string) {
+  return raw.trim().toLowerCase();
+}
+
+function includesQuery(query: string, parts: Array<string | null | undefined>) {
+  if (!query) return true;
+  for (const p of parts) {
+    if (!p) continue;
+    if (String(p).toLowerCase().includes(query)) return true;
+  }
+  return false;
 }
 
 /** Preserves all list page params when changing one pager (omits param when page is 1). */
@@ -210,11 +224,115 @@ export function AdminClientsTabs({
   const [tab, setTab] = useState<
     "companies" | "carriers" | "blacklistedCompanies" | "blacklistedCarriers"
   >("companies");
+  const [queryRaw, setQueryRaw] = useState("");
 
   const dateLabel = useMemo(() => (iso: string) => formatRegisteredAt(iso, locale), [locale]);
+  const query = useMemo(() => normalizeQuery(queryRaw), [queryRaw]);
 
   const carriersTabCount = driverTotal + directoryTotal;
   const blacklistedCarriersTabCount = blacklistedDriverTotal + blacklistedDirectoryTotal;
+
+  const filteredCompanies = useMemo(
+    () =>
+      companies.filter((row) =>
+        includesQuery(query, [
+          row.email,
+          row.companyName,
+          row.contactPerson,
+          row.name,
+          row.phone,
+          row.city,
+          row.address,
+          row.commercialRegister,
+        ])
+      ),
+    [companies, query]
+  );
+
+  const filteredBlacklistedCompanies = useMemo(
+    () =>
+      blacklistedCompanies.filter((row) =>
+        includesQuery(query, [
+          row.email,
+          row.companyName,
+          row.contactPerson,
+          row.name,
+          row.phone,
+          row.city,
+          row.address,
+          row.commercialRegister,
+        ])
+      ),
+    [blacklistedCompanies, query]
+  );
+
+  const filteredRegisteredCarriers = useMemo(
+    () =>
+      registeredCarriers.filter((row) =>
+        includesQuery(query, [
+          carrierRowCompanyName(row),
+          carrierRowRepresentative(row),
+          row.email,
+          row.phone,
+          carrierRowTruckTypes(row),
+          carrierRowDestinations(row),
+          row.carPlate,
+          row.carType,
+          row.licenseNumber,
+          row.nationalId,
+        ])
+      ),
+    [registeredCarriers, query]
+  );
+
+  const filteredDirectoryCarriers = useMemo(
+    () =>
+      directoryCarriers.filter((row) =>
+        includesQuery(query, [
+          row.company_name,
+          row.representative_name,
+          row.email,
+          row.phone,
+          row.truck_types,
+          row.destinations,
+        ])
+      ),
+    [directoryCarriers, query]
+  );
+
+  const filteredBlacklistedCarriers = useMemo(
+    () =>
+      blacklistedCarriers.filter((row) =>
+        includesQuery(query, [
+          carrierRowCompanyName(row),
+          carrierRowRepresentative(row),
+          row.email,
+          row.phone,
+          carrierRowTruckTypes(row),
+          carrierRowDestinations(row),
+          row.carPlate,
+          row.carType,
+          row.licenseNumber,
+          row.nationalId,
+        ])
+      ),
+    [blacklistedCarriers, query]
+  );
+
+  const filteredBlacklistedDirectoryCarriers = useMemo(
+    () =>
+      blacklistedDirectoryCarriers.filter((row) =>
+        includesQuery(query, [
+          row.company_name,
+          row.representative_name,
+          row.email,
+          row.phone,
+          row.truck_types,
+          row.destinations,
+        ])
+      ),
+    [blacklistedDirectoryCarriers, query]
+  );
 
   const pages = {
     coPage: companyPage,
@@ -274,13 +392,22 @@ export function AdminClientsTabs({
         </button>
       </div>
 
+      <DashboardListSearch
+        value={queryRaw}
+        onChange={setQueryRaw}
+        placeholder={locale === "ar" ? "ابحث في العملاء…" : "Search clients…"}
+        id="admin-clients-search"
+      />
+
       {tab === "companies" ? (
         companyTotal === 0 ? (
           <p className="text-muted-foreground py-6">{t(`${da}.clientsEmptyCompanies`)}</p>
+        ) : filteredCompanies.length === 0 ? (
+          <p className="text-muted-foreground py-6">{t(`${da}.noSearchResults`)}</p>
         ) : (
           <div className="space-y-3">
             <div className="md:hidden space-y-3">
-              {companies.map((row) => (
+              {filteredCompanies.map((row) => (
                 <article
                   key={row.id}
                   className="rounded-xl border border-border bg-card/50 p-4 shadow-sm"
@@ -327,7 +454,7 @@ export function AdminClientsTabs({
                   </tr>
                 </thead>
                 <tbody>
-                  {companies.map((row) => (
+                  {filteredCompanies.map((row) => (
                     <tr key={row.id} className="border-b border-border/80 last:border-0">
                       <td className="p-3 align-top text-right break-words min-w-0">
                         <LtrCell>{row.email}</LtrCell>
@@ -363,10 +490,12 @@ export function AdminClientsTabs({
       ) : tab === "blacklistedCompanies" ? (
         blacklistedCompanyTotal === 0 ? (
           <p className="text-muted-foreground py-6">{t(`${da}.clientsEmptyBlacklistedCompanies`)}</p>
+        ) : filteredBlacklistedCompanies.length === 0 ? (
+          <p className="text-muted-foreground py-6">{t(`${da}.noSearchResults`)}</p>
         ) : (
           <div className="space-y-3">
             <div className="md:hidden space-y-3">
-              {blacklistedCompanies.map((row) => (
+              {filteredBlacklistedCompanies.map((row) => (
                 <article
                   key={row.id}
                   className="rounded-xl border border-border bg-card/50 p-4 shadow-sm"
@@ -413,7 +542,7 @@ export function AdminClientsTabs({
                   </tr>
                 </thead>
                 <tbody>
-                  {blacklistedCompanies.map((row) => (
+                  {filteredBlacklistedCompanies.map((row) => (
                     <tr key={row.id} className="border-b border-border/80 last:border-0">
                       <td className="p-3 align-top text-right break-words min-w-0">
                         <LtrCell>{row.email}</LtrCell>
@@ -454,16 +583,20 @@ export function AdminClientsTabs({
       ) : tab === "carriers" ? (
         carriersTabCount === 0 ? (
           <p className="text-muted-foreground py-6">{t(`${da}.clientsEmptyCarriers`)}</p>
+        ) : filteredRegisteredCarriers.length === 0 && filteredDirectoryCarriers.length === 0 ? (
+          <p className="text-muted-foreground py-6">{t(`${da}.noSearchResults`)}</p>
         ) : (
           <div className="space-y-10">
             <section className="space-y-3">
               <h2 className="text-lg font-semibold text-foreground">{t(`${da}.clientsSectionRegisteredCarriers`)}</h2>
               {driverTotal === 0 ? (
                 <p className="text-sm text-muted-foreground">{t(`${da}.clientsRegisteredCarriersEmpty`)}</p>
+              ) : filteredRegisteredCarriers.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t(`${da}.noSearchResults`)}</p>
               ) : (
                 <div className="space-y-3">
                   <div className="md:hidden space-y-3">
-                    {registeredCarriers.map((row) => (
+                    {filteredRegisteredCarriers.map((row) => (
                       <article
                         key={row.id}
                         className="rounded-xl border border-border bg-card/50 p-4 shadow-sm"
@@ -516,7 +649,7 @@ export function AdminClientsTabs({
                         </tr>
                       </thead>
                       <tbody>
-                        {registeredCarriers.map((row) => (
+                        {filteredRegisteredCarriers.map((row) => (
                           <tr key={row.id} className="border-b border-border/80 last:border-0">
                             <td className="p-3 align-top text-start break-words min-w-0">{carrierRowCompanyName(row)}</td>
                             <td className="p-3 align-top text-start break-words min-w-0">{carrierRowRepresentative(row)}</td>
@@ -564,10 +697,12 @@ export function AdminClientsTabs({
               <h2 className="text-lg font-semibold text-foreground">{t(`${da}.clientsSectionDirectoryCarriers`)}</h2>
               {directoryTotal === 0 ? (
                 <p className="text-sm text-muted-foreground">{t(`${da}.clientsDirectoryEmpty`)}</p>
+              ) : filteredDirectoryCarriers.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t(`${da}.noSearchResults`)}</p>
               ) : (
                 <>
                   <div className="md:hidden space-y-3">
-                    {directoryCarriers.map((row) => (
+                    {filteredDirectoryCarriers.map((row) => (
                       <article
                         key={row.id}
                         className="rounded-xl border border-border bg-card/50 p-4 shadow-sm"
@@ -613,7 +748,7 @@ export function AdminClientsTabs({
                         </tr>
                       </thead>
                       <tbody>
-                        {directoryCarriers.map((row) => (
+                        {filteredDirectoryCarriers.map((row) => (
                           <tr key={row.id} className="border-b border-border/80 last:border-0">
                             <td className="p-3 align-top text-start break-words min-w-0">{row.company_name ?? "—"}</td>
                             <td className="p-3 align-top text-start break-words min-w-0">{row.representative_name ?? "—"}</td>
@@ -655,16 +790,20 @@ export function AdminClientsTabs({
         )
       ) : blacklistedCarriersTabCount === 0 ? (
         <p className="text-muted-foreground py-6">{t(`${da}.clientsEmptyBlacklistedCarriers`)}</p>
+      ) : filteredBlacklistedCarriers.length === 0 && filteredBlacklistedDirectoryCarriers.length === 0 ? (
+        <p className="text-muted-foreground py-6">{t(`${da}.noSearchResults`)}</p>
       ) : (
         <div className="space-y-10">
           <section className="space-y-3">
             <h2 className="text-lg font-semibold text-foreground">{t(`${da}.clientsSectionBlacklistedRegisteredCarriers`)}</h2>
             {blacklistedDriverTotal === 0 ? (
               <p className="text-sm text-muted-foreground">{t(`${da}.clientsBlacklistedRegisteredCarriersEmpty`)}</p>
+            ) : filteredBlacklistedCarriers.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t(`${da}.noSearchResults`)}</p>
             ) : (
               <div className="space-y-3">
                 <div className="md:hidden space-y-3">
-                  {blacklistedCarriers.map((row) => (
+                  {filteredBlacklistedCarriers.map((row) => (
                     <article
                       key={row.id}
                       className="rounded-xl border border-border bg-card/50 p-4 shadow-sm"
@@ -717,7 +856,7 @@ export function AdminClientsTabs({
                       </tr>
                     </thead>
                     <tbody>
-                      {blacklistedCarriers.map((row) => (
+                      {filteredBlacklistedCarriers.map((row) => (
                         <tr key={row.id} className="border-b border-border/80 last:border-0">
                           <td className="p-3 align-top text-start break-words min-w-0">{carrierRowCompanyName(row)}</td>
                           <td className="p-3 align-top text-start break-words min-w-0">{carrierRowRepresentative(row)}</td>
@@ -765,10 +904,12 @@ export function AdminClientsTabs({
             <h2 className="text-lg font-semibold text-foreground">{t(`${da}.clientsSectionBlacklistedDirectoryCarriers`)}</h2>
             {blacklistedDirectoryTotal === 0 ? (
               <p className="text-sm text-muted-foreground">{t(`${da}.clientsBlacklistedDirectoryEmpty`)}</p>
+            ) : filteredBlacklistedDirectoryCarriers.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t(`${da}.noSearchResults`)}</p>
             ) : (
               <>
                 <div className="md:hidden space-y-3">
-                  {blacklistedDirectoryCarriers.map((row) => (
+                  {filteredBlacklistedDirectoryCarriers.map((row) => (
                     <article
                       key={row.id}
                       className="rounded-xl border border-border bg-card/50 p-4 shadow-sm"
@@ -814,7 +955,7 @@ export function AdminClientsTabs({
                       </tr>
                     </thead>
                     <tbody>
-                      {blacklistedDirectoryCarriers.map((row) => (
+                      {filteredBlacklistedDirectoryCarriers.map((row) => (
                         <tr key={row.id} className="border-b border-border/80 last:border-0">
                           <td className="p-3 align-top text-start break-words min-w-0">{row.company_name ?? "—"}</td>
                           <td className="p-3 align-top text-start break-words min-w-0">{row.representative_name ?? "—"}</td>

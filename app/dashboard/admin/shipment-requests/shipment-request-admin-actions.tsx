@@ -36,6 +36,8 @@ export function ShipmentRequestAdminActions({
   estimatedPriceSar,
   invoiceLink: invoiceLinkProp,
   invoiceImageUrl,
+  unloadPermitRequired,
+  unloadPermitImageUrl,
   assignedShipmentCompany,
   assignedPlatformDriverName,
   initialShortlistKeys,
@@ -47,6 +49,8 @@ export function ShipmentRequestAdminActions({
   estimatedPriceSar: number | null;
   invoiceLink: string | null;
   invoiceImageUrl: string | null;
+  unloadPermitRequired: boolean;
+  unloadPermitImageUrl: string | null;
   assignedShipmentCompany: {
     id: string;
     company_name: string | null;
@@ -559,6 +563,33 @@ export function ShipmentRequestAdminActions({
           >
             {t(`${a}.shipmentActionsPaymentProofOpen`)}
           </a>
+          {unloadPermitRequired && unloadPermitImageUrl ? (
+            <div className="space-y-2 rounded-xl border border-border bg-background/70 p-3">
+              <p className="text-xs font-medium text-muted-foreground">
+                {t(`${a}.shipmentActionsUnloadPermitOnFile`)}
+              </p>
+              <div className="rounded-lg border border-border bg-background p-2 shadow-sm">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={unloadPermitImageUrl}
+                  alt=""
+                  className="max-h-56 w-full max-w-md rounded-md object-contain mx-auto"
+                />
+              </div>
+              <a
+                href={unloadPermitImageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex text-sm font-medium text-primary underline underline-offset-2"
+              >
+                {t(`${a}.shipmentActionsUnloadPermitOpen`)}
+              </a>
+            </div>
+          ) : unloadPermitRequired ? (
+            <p className="text-xs text-muted-foreground">
+              {t(`${a}.shipmentActionsUnloadPermitMissing`)}
+            </p>
+          ) : null}
           <div className="flex flex-wrap gap-2 pt-1">
             <Button
               size="sm"
@@ -614,6 +645,27 @@ export function ShipmentRequestAdminActions({
                 className="inline-flex text-sm font-medium text-primary underline underline-offset-2"
               >
                 {t(`${a}.shipmentActionsPaymentProofOpen`)}
+              </a>
+            </div>
+          ) : null}
+          {unloadPermitRequired && unloadPermitImageUrl ? (
+            <div className="space-y-2 rounded-xl border border-border bg-muted/20 p-3">
+              <p className="text-xs font-medium text-muted-foreground">{t(`${a}.shipmentActionsUnloadPermitOnFile`)}</p>
+              <div className="rounded-lg border border-border bg-background p-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={unloadPermitImageUrl}
+                  alt=""
+                  className="max-h-48 w-full max-w-md rounded-md object-contain mx-auto"
+                />
+              </div>
+              <a
+                href={unloadPermitImageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex text-sm font-medium text-primary underline underline-offset-2"
+              >
+                {t(`${a}.shipmentActionsUnloadPermitOpen`)}
               </a>
             </div>
           ) : null}
