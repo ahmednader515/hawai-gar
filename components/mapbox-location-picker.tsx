@@ -50,6 +50,8 @@ export function MapboxLocationPicker({
   const markerToRef = useRef<mapboxgl.Marker | null>(null);
   const routeAbortRef = useRef<AbortController | null>(null);
   const activeRef = useRef<"from" | "to">("from");
+  const lastFromResultsRef = useRef<any[]>([]);
+  const lastToResultsRef = useRef<any[]>([]);
 
   const [active, setActive] = useState<"from" | "to">("from");
   activeRef.current = active;
@@ -120,23 +122,58 @@ export function MapboxLocationPicker({
       });
     }
 
-    geocoderFrom.on("result", (e: any) => {
-      const c = e?.result?.center;
-      if (!Array.isArray(c) || c.length !== 2) return;
+    const applyFeaturePick = (which: "from" | "to", feature: any) => {
+      const c = feature?.center;
+      if (!Array.isArray(c) || c.length !== 2) return false;
       const [lng, lat] = c;
-      setActive("from");
-      setPicked("from", { address: e.result.place_name ?? `${lat}, ${lng}`, lat, lng });
+      setActive(which);
+      setPicked(which, { address: feature.place_name ?? `${lat}, ${lng}`, lat, lng });
       map.flyTo({ center: [lng, lat], zoom: 9, essential: true });
+      return true;
+    };
+
+    geocoderFrom.on("result", (e: any) => {
+      applyFeaturePick("from", e?.result);
     });
 
     geocoderTo.on("result", (e: any) => {
-      const c = e?.result?.center;
-      if (!Array.isArray(c) || c.length !== 2) return;
-      const [lng, lat] = c;
-      setActive("to");
-      setPicked("to", { address: e.result.place_name ?? `${lat}, ${lng}`, lat, lng });
-      map.flyTo({ center: [lng, lat], zoom: 9, essential: true });
+      applyFeaturePick("to", e?.result);
     });
+
+    geocoderFrom.on("results", (e: any) => {
+      lastFromResultsRef.current = Array.isArray(e?.features) ? e.features : [];
+    });
+    geocoderTo.on("results", (e: any) => {
+      lastToResultsRef.current = Array.isArray(e?.features) ? e.features : [];
+    });
+
+    const mkAutoPickHandler = (which: "from" | "to") => (ev: KeyboardEvent) => {
+      if (ev.key !== "Enter") return;
+      const features = which === "from" ? lastFromResultsRef.current : lastToResultsRef.current;
+      if (features?.[0]) {
+        // If user typed and pressed Enter without clicking a suggestion, pick the top result.
+        ev.preventDefault();
+        applyFeaturePick(which, features[0]);
+      }
+    };
+
+    const fromAutoPick = mkAutoPickHandler("from");
+    const toAutoPick = mkAutoPickHandler("to");
+    const fromEl = geocoderFromHostRef.current?.querySelector("input");
+    const toEl = geocoderToHostRef.current?.querySelector("input");
+    fromEl?.addEventListener("keydown", fromAutoPick);
+    toEl?.addEventListener("keydown", toAutoPick);
+
+    const fromBlur = () => {
+      const features = lastFromResultsRef.current;
+      if (features?.[0]) applyFeaturePick("from", features[0]);
+    };
+    const toBlur = () => {
+      const features = lastToResultsRef.current;
+      if (features?.[0]) applyFeaturePick("to", features[0]);
+    };
+    fromEl?.addEventListener("blur", fromBlur);
+    toEl?.addEventListener("blur", toBlur);
 
     map.on("click", (ev) => {
       const { lng, lat } = ev.lngLat;
@@ -155,6 +192,10 @@ export function MapboxLocationPicker({
       } catch {
         // ignore
       }
+      fromEl?.removeEventListener("keydown", fromAutoPick);
+      toEl?.removeEventListener("keydown", toAutoPick);
+      fromEl?.removeEventListener("blur", fromBlur);
+      toEl?.removeEventListener("blur", toBlur);
       if (geocoderFromHostRef.current) geocoderFromHostRef.current.replaceChildren();
       if (geocoderToHostRef.current) geocoderToHostRef.current.replaceChildren();
       map.remove();
@@ -204,9 +245,21 @@ export function MapboxLocationPicker({
         try {
           const line = await getDrivingRouteOrStraight(valueFrom, valueTo, token, signal);
           if (signal.aborted || mapRef.current !== map) return;
-          if (!map.loaded()) return;
-          addDrivingRouteLayer(map, line);
-          fitMapToCoordinates(map, line.coordinates);
+          const paint = () => {
+            if (signal.aborted || mapRef.current !== map) return;
+            try {
+              addDrivingRouteLayer(map, line);
+              fitMapToCoordinates(map, line.coordinates);
+            } catch {
+              // style not ready; we'll retry once on next load
+            }
+          };
+
+          if (!map.loaded()) {
+            map.once("load", paint);
+            return;
+          }
+          paint();
         } catch {
           /* aborted */
         }

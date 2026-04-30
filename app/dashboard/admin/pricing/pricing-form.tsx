@@ -8,6 +8,52 @@ import type { ShipmentPricingSettings } from "@/lib/shipment-pricing";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { TRUCK_SIZE_OPTIONS, TRUCK_TYPE_OPTIONS_BY_SIZE } from "@/lib/truck-options";
 
+function parseNonNeg(raw: string | undefined) {
+  const n = parseFloat(String(raw ?? "").trim().replace(",", "."));
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
+function clampPercentString(raw: string) {
+  const s = String(raw ?? "");
+  if (!s.trim()) return "0";
+  const normalized = s.replace(",", ".");
+  const n = parseNonNeg(normalized);
+  const clamped = Math.min(100, n);
+  // Preserve user typing a trailing decimal separator (e.g. "10.")
+  if (/[.,]$/.test(s) && n <= 100) return normalized;
+  return String(clamped);
+}
+
+function PercentInput({
+  value,
+  onValueChange,
+  disabled,
+  ariaLabel,
+}: {
+  value: string;
+  onValueChange: (next: string) => void;
+  disabled?: boolean;
+  ariaLabel: string;
+}) {
+  return (
+    <div className="relative">
+      <Input
+        inputMode="decimal"
+        min={0}
+        max={100}
+        value={value}
+        onChange={(e) => onValueChange(clampPercentString(e.target.value))}
+        className="h-9 w-20 text-right tabular-nums pe-6"
+        aria-label={ariaLabel}
+        disabled={disabled}
+      />
+      <span className="pointer-events-none absolute inset-y-0 end-2 flex items-center text-xs text-muted-foreground">
+        %
+      </span>
+    </div>
+  );
+}
+
 export function AdminPricingForm({ initial }: { initial: ShipmentPricingSettings }) {
   const { t } = useI18n();
   const [sarPerKm, setSarPerKm] = useState(String(initial.sarPerKm));
@@ -62,25 +108,23 @@ export function AdminPricingForm({ initial }: { initial: ShipmentPricingSettings
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const mapToNumber = (obj: Record<string, string>) => {
-    const out: Record<string, number> = {};
-    for (const [k, v] of Object.entries(obj)) {
-      const n = parseFloat(String(v).trim().replace(",", "."));
-      out[k] = Number.isFinite(n) && n >= 0 ? n : 0;
-    }
-    return out;
-  };
+  const hasPositiveValue = (raw: string | undefined) => parseNonNeg(raw) > 0;
 
   const mergeValueMaps = (sarMap: Record<string, string>, pctMap: Record<string, string>) => {
     const keys = new Set([...Object.keys(sarMap), ...Object.keys(pctMap)]);
     const out: Record<string, { addSar: number; pct: number }> = {};
     for (const k of keys) {
-      const addSar = parseFloat(String(sarMap[k] ?? "0").trim().replace(",", "."));
-      const pct = parseFloat(String(pctMap[k] ?? "0").trim().replace(",", "."));
-      out[k] = {
-        addSar: Number.isFinite(addSar) && addSar >= 0 ? addSar : 0,
-        pct: Number.isFinite(pct) && pct >= 0 ? pct : 0,
-      };
+      const addSar = parseNonNeg(sarMap[k]);
+      const pct = parseNonNeg(pctMap[k]);
+
+      // Mutually exclusive: either fixed SAR or percentage (not both).
+      if (addSar > 0) {
+        out[k] = { addSar, pct: 0 };
+      } else if (pct > 0) {
+        out[k] = { addSar: 0, pct };
+      } else {
+        out[k] = { addSar: 0, pct: 0 };
+      }
     }
     return out;
   };
@@ -182,16 +226,27 @@ export function AdminPricingForm({ initial }: { initial: ShipmentPricingSettings
                   <Input
                     inputMode="decimal"
                     value={modShipmentTypeSar[k] ?? "0"}
-                    onChange={(e) => setModShipmentTypeSar((prev) => ({ ...prev, [k]: e.target.value }))}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setModShipmentTypeSar((prev) => ({ ...prev, [k]: next }));
+                      if (hasPositiveValue(next)) {
+                        setModShipmentTypePct((prev) => ({ ...prev, [k]: "0" }));
+                      }
+                    }}
                     className="h-9 w-24 text-right tabular-nums"
                     aria-label={`${k} add SAR`}
+                    disabled={hasPositiveValue(modShipmentTypePct[k])}
                   />
-                  <Input
-                    inputMode="decimal"
+                  <PercentInput
                     value={modShipmentTypePct[k] ?? "0"}
-                    onChange={(e) => setModShipmentTypePct((prev) => ({ ...prev, [k]: e.target.value }))}
-                    className="h-9 w-20 text-right tabular-nums"
-                    aria-label={`${k} percent`}
+                    onValueChange={(next) => {
+                      setModShipmentTypePct((prev) => ({ ...prev, [k]: next }));
+                      if (hasPositiveValue(next)) {
+                        setModShipmentTypeSar((prev) => ({ ...prev, [k]: "0" }));
+                      }
+                    }}
+                    ariaLabel={`${k} percent`}
+                    disabled={hasPositiveValue(modShipmentTypeSar[k])}
                   />
                 </div>
               </div>
@@ -209,16 +264,27 @@ export function AdminPricingForm({ initial }: { initial: ShipmentPricingSettings
                   <Input
                     inputMode="decimal"
                     value={modTruckSizeSar[k] ?? "0"}
-                    onChange={(e) => setModTruckSizeSar((prev) => ({ ...prev, [k]: e.target.value }))}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setModTruckSizeSar((prev) => ({ ...prev, [k]: next }));
+                      if (hasPositiveValue(next)) {
+                        setModTruckSizePct((prev) => ({ ...prev, [k]: "0" }));
+                      }
+                    }}
                     className="h-9 w-24 text-right tabular-nums"
                     aria-label={`${k} add SAR`}
+                    disabled={hasPositiveValue(modTruckSizePct[k])}
                   />
-                  <Input
-                    inputMode="decimal"
+                  <PercentInput
                     value={modTruckSizePct[k] ?? "0"}
-                    onChange={(e) => setModTruckSizePct((prev) => ({ ...prev, [k]: e.target.value }))}
-                    className="h-9 w-20 text-right tabular-nums"
-                    aria-label={`${k} percent`}
+                    onValueChange={(next) => {
+                      setModTruckSizePct((prev) => ({ ...prev, [k]: next }));
+                      if (hasPositiveValue(next)) {
+                        setModTruckSizeSar((prev) => ({ ...prev, [k]: "0" }));
+                      }
+                    }}
+                    ariaLabel={`${k} percent`}
+                    disabled={hasPositiveValue(modTruckSizeSar[k])}
                   />
                 </div>
               </div>
@@ -236,16 +302,27 @@ export function AdminPricingForm({ initial }: { initial: ShipmentPricingSettings
                   <Input
                     inputMode="decimal"
                     value={modTruckTypeSar[k] ?? "0"}
-                    onChange={(e) => setModTruckTypeSar((prev) => ({ ...prev, [k]: e.target.value }))}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setModTruckTypeSar((prev) => ({ ...prev, [k]: next }));
+                      if (hasPositiveValue(next)) {
+                        setModTruckTypePct((prev) => ({ ...prev, [k]: "0" }));
+                      }
+                    }}
                     className="h-9 w-24 text-right tabular-nums"
                     aria-label={`${k} add SAR`}
+                    disabled={hasPositiveValue(modTruckTypePct[k])}
                   />
-                  <Input
-                    inputMode="decimal"
+                  <PercentInput
                     value={modTruckTypePct[k] ?? "0"}
-                    onChange={(e) => setModTruckTypePct((prev) => ({ ...prev, [k]: e.target.value }))}
-                    className="h-9 w-20 text-right tabular-nums"
-                    aria-label={`${k} percent`}
+                    onValueChange={(next) => {
+                      setModTruckTypePct((prev) => ({ ...prev, [k]: next }));
+                      if (hasPositiveValue(next)) {
+                        setModTruckTypeSar((prev) => ({ ...prev, [k]: "0" }));
+                      }
+                    }}
+                    ariaLabel={`${k} percent`}
+                    disabled={hasPositiveValue(modTruckTypeSar[k])}
                   />
                 </div>
               </div>
