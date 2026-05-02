@@ -237,6 +237,8 @@ model ShipmentRequest {
   invoiceLink     String?
   /// Company-uploaded image of paid invoice / receipt (UploadThing URL).
   invoiceImageUrl String?
+  /// Set when company clicks "I have paid" before proof review.
+  companyMarkedPaidAt DateTime?
   /// Whether the unloading location requires a permit document (set by company at request creation).
   unloadPermitRequired Boolean @default(false)
   /// Company-uploaded image of unloading permit (UploadThing URL).

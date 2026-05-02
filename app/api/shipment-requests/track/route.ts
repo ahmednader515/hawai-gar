@@ -49,6 +49,7 @@ export async function GET(req: Request) {
         adminDecisionAt: true,
         invoiceLink: true,
         invoiceImageUrl: true,
+        companyMarkedPaidAt: true,
         unloadPermitRequired: true,
         unloadPermitImageUrl: true,
         shipmentCompany: {
@@ -95,6 +96,7 @@ export async function GET(req: Request) {
       adminDecisionAt: r.adminDecisionAt,
       invoiceLink: r.invoiceLink,
       invoiceImageUrl: r.invoiceImageUrl,
+      companyMarkedPaidAt: r.companyMarkedPaidAt,
       unloadPermitRequired: r.unloadPermitRequired,
       unloadPermitImageUrl: r.unloadPermitImageUrl,
       shipmentCompany: r.shipmentCompany,

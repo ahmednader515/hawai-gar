@@ -61,6 +61,8 @@ export async function PATCH(
       status: nextStatus,
       adminId: session.user.id,
       adminDecisionAt: new Date(),
+      invoiceImageUrl: null,
+      companyMarkedPaidAt: null,
     };
 
     // Only apply edited price when approving.

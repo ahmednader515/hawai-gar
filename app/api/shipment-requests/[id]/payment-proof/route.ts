@@ -35,7 +35,7 @@ export async function PATCH(
 
     const r = await prisma.shipmentRequest.findUnique({
       where: { id },
-      select: { companyId: true, status: true },
+      select: { companyId: true, status: true, companyMarkedPaidAt: true },
     });
     if (!r) {
       return NextResponse.json({ error: "الطلب غير موجود" }, { status: 404 });
@@ -54,11 +54,10 @@ export async function PATCH(
       );
     }
 
-    // After final price approval, uploading proof moves request to "awaiting payment review".
-    // Clearing the image from that state returns to price-approved (no proof).
+    // Upload/replace proof. Status only moves to review once company has marked "I have paid".
     let nextStatus = r.status;
     if (invoiceImageUrl) {
-      if (r.status === "ADMIN_APPROVED" || r.status === "AWAITING_PAYMENT_APPROVAL") {
+      if (r.companyMarkedPaidAt && (r.status === "ADMIN_APPROVED" || r.status === "AWAITING_PAYMENT_APPROVAL")) {
         nextStatus = "AWAITING_PAYMENT_APPROVAL";
       }
     } else if (r.status === "AWAITING_PAYMENT_APPROVAL") {

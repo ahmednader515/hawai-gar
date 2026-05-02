@@ -55,6 +55,7 @@ export async function PATCH(
         data: {
           status: "ADMIN_APPROVED",
           invoiceImageUrl: null,
+          companyMarkedPaidAt: null,
         },
       });
     }

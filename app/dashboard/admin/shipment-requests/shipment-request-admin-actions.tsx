@@ -11,7 +11,6 @@ import {
   allowsAdminCarrierReassign,
   shouldClearWorkflowOnCarrierChange,
 } from "@/lib/admin-carrier-reassign";
-import { AdminInvoiceLinkFields } from "./invoice-link-fields";
 
 export type CompatibleAssigneeRow = {
   source: "platformDriver" | "directoryCompany";
@@ -34,7 +33,6 @@ export function ShipmentRequestAdminActions({
   status,
   priceSar,
   estimatedPriceSar,
-  invoiceLink: invoiceLinkProp,
   invoiceImageUrl,
   unloadPermitRequired,
   unloadPermitImageUrl,
@@ -47,7 +45,6 @@ export function ShipmentRequestAdminActions({
   status: string;
   priceSar: number | null;
   estimatedPriceSar: number | null;
-  invoiceLink: string | null;
   invoiceImageUrl: string | null;
   unloadPermitRequired: boolean;
   unloadPermitImageUrl: string | null;
@@ -71,7 +68,6 @@ export function ShipmentRequestAdminActions({
   const [loading, setLoading] = useState<
     | "approve"
     | "reject"
-    | "invoice"
     | "paymentApprove"
     | "paymentReject"
     | "assignCarrier"
@@ -84,7 +80,6 @@ export function ShipmentRequestAdminActions({
     priceSar == null ? "" : String(Math.round(priceSar)),
   );
   const [priceChangeNotice, setPriceChangeNotice] = useState("");
-  const [invoiceLinkInput, setInvoiceLinkInput] = useState(() => invoiceLinkProp ?? "");
   const [shortlistKeys, setShortlistKeys] = useState<string[]>(() => [...initialShortlistKeys]);
   const [companySearch, setCompanySearch] = useState("");
 
@@ -94,15 +89,10 @@ export function ShipmentRequestAdminActions({
   const canAssignCarrier = allowsAdminCarrierReassign(status);
   const showReassignWorkflowWarning = shouldClearWorkflowOnCarrierChange(status);
 
-  const canEditInvoiceLink =
-    canCarrierDecide ||
+  const canAccessGeneratedInvoice =
     status === "ADMIN_APPROVED" ||
     status === "AWAITING_PAYMENT_APPROVAL" ||
     status === "COMPLETE";
-
-  useEffect(() => {
-    setInvoiceLinkInput(invoiceLinkProp ?? "");
-  }, [invoiceLinkProp]);
 
   useEffect(() => {
     setShortlistKeys([...initialShortlistKeys]);
@@ -182,28 +172,6 @@ export function ShipmentRequestAdminActions({
         setError((data.error as string) ?? t(`${a}.shipmentActionsErrorGeneric`));
         return;
       }
-      router.refresh();
-    } finally {
-      setLoading(null);
-    }
-  }
-
-  async function saveInvoiceLink(clear: boolean) {
-    setLoading("invoice");
-    setError(null);
-    try {
-      const invoiceLink = clear ? "" : invoiceLinkInput.trim();
-      const res = await fetch(`/api/admin/shipment-requests/${id}/invoice-link`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ invoiceLink }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError((data.error as string) ?? t(`${a}.shipmentActionsErrorGeneric`));
-        return;
-      }
-      if (clear) setInvoiceLinkInput("");
       router.refresh();
     } finally {
       setLoading(null);
@@ -505,19 +473,6 @@ export function ShipmentRequestAdminActions({
             )}
           </div>
 
-          {canEditInvoiceLink ? (
-            <AdminInvoiceLinkFields
-              variant="belowPrice"
-              invoiceLinkInput={invoiceLinkInput}
-              onInvoiceLinkChange={setInvoiceLinkInput}
-              invoiceLinkProp={invoiceLinkProp}
-              loadingInvoice={loading === "invoice"}
-              onSave={() => void saveInvoiceLink(false)}
-              onClear={() => void saveInvoiceLink(true)}
-              t={t}
-            />
-          ) : null}
-
           <div className="flex flex-wrap gap-2">
             <Button size="sm" onClick={() => sendCarrierDecision("approve")} disabled={actionBusy}>
               {loading === "approve"
@@ -672,18 +627,28 @@ export function ShipmentRequestAdminActions({
         </>
       )}
 
-      {!canCarrierDecide && canEditInvoiceLink && (
+      {canAccessGeneratedInvoice && (
         <div className="space-y-3 rounded-xl border border-primary/25 bg-primary/[0.04] p-4">
-          <AdminInvoiceLinkFields
-            variant="standalone"
-            invoiceLinkInput={invoiceLinkInput}
-            onInvoiceLinkChange={setInvoiceLinkInput}
-            invoiceLinkProp={invoiceLinkProp}
-            loadingInvoice={loading === "invoice"}
-            onSave={() => void saveInvoiceLink(false)}
-            onClear={() => void saveInvoiceLink(true)}
-            t={t}
-          />
+          <p className="text-sm font-medium">{t(`${a}.shipmentActionsGeneratedInvoiceTitle`)}</p>
+          <p className="text-xs text-muted-foreground">{t(`${a}.shipmentActionsGeneratedInvoiceHint`)}</p>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={`/shipment-requests/${id}/invoice`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-9 items-center rounded-lg border border-border bg-background px-3 text-sm font-medium hover:bg-muted"
+            >
+              {t(`${a}.shipmentActionsGeneratedInvoiceOpen`)}
+            </a>
+            <a
+              href={`/shipment-requests/${id}/invoice?print=1`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-9 items-center rounded-lg border border-border bg-background px-3 text-sm font-medium hover:bg-muted"
+            >
+              {t(`${a}.shipmentActionsGeneratedInvoicePrintSavePdf`)}
+            </a>
+          </div>
         </div>
       )}
     </div>

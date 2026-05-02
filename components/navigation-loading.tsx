@@ -26,6 +26,8 @@ function NavigationLoadingInner() {
   const searchParams = useSearchParams();
   const [pending, setPending] = useState(false);
   const [truckRun, setTruckRun] = useState<TruckRunSpec | null>(null);
+  const isInvoiceViewPage =
+    pathname.startsWith("/shipment-requests/") && pathname.endsWith("/invoice");
 
   const routeKey = `${pathname}?${searchParams.toString()}`;
   const routeKeyRef = useRef(routeKey);
@@ -58,6 +60,7 @@ function NavigationLoadingInner() {
   clearLoadingRef.current = clearLoading;
 
   const armCommon = useCallback(() => {
+    if (isInvoiceViewPage) return;
     loadStartedAtRef.current = Date.now();
     truckScheduledForRouteKeyRef.current = null;
     setTruckRun(null);
@@ -67,7 +70,7 @@ function NavigationLoadingInner() {
     maxTimerRef.current = setTimeout(() => {
       clearLoadingRef.current();
     }, MAX_LOADING_MS);
-  }, []);
+  }, [isInvoiceViewPage]);
 
   /** Link / form: defer overlay until after default navigation. */
   const armLoadingFromInteraction = useCallback(() => {
@@ -81,6 +84,7 @@ function NavigationLoadingInner() {
   /** Full load & refresh: show loader for current URL (no route change to wait for). */
   const initialArmOnceRef = useRef(false);
   useEffect(() => {
+    if (isInvoiceViewPage) return;
     if (initialArmOnceRef.current) return;
     initialArmOnceRef.current = true;
     window.setTimeout(() => {
@@ -88,7 +92,7 @@ function NavigationLoadingInner() {
       armedAtRouteKeyRef.current = null;
       armCommon();
     }, 0);
-  }, [armCommon]);
+  }, [armCommon, isInvoiceViewPage]);
 
   /** Back / forward: capture React route key now (still “old” page), then arm like a navigation. */
   const onPopState = useCallback(() => {
@@ -174,6 +178,10 @@ function NavigationLoadingInner() {
   );
 
   useEffect(() => {
+    if (isInvoiceViewPage && pending) {
+      clearLoading();
+      return;
+    }
     const onSubmitCapture = (e: Event) => {
       const form = (e as SubmitEvent).target;
       if (!(form instanceof HTMLFormElement)) return;
@@ -188,7 +196,7 @@ function NavigationLoadingInner() {
       window.removeEventListener("submit", onSubmitCapture, true);
       window.removeEventListener("popstate", onPopState);
     };
-  }, [onClickCapture, armLoadingFromInteraction, onPopState]);
+  }, [onClickCapture, armLoadingFromInteraction, onPopState, isInvoiceViewPage, pending, clearLoading]);
 
   if (!pending) return null;
   return (

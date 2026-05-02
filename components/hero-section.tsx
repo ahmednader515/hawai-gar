@@ -14,7 +14,11 @@ import type { PickedLocation } from "@/components/mapbox-location-picker";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { CopyableRequestId } from "@/components/copyable-request-id";
 import { TRUCK_SIZE_OPTIONS, TRUCK_TYPE_OPTIONS_BY_SIZE, type TruckOption } from "@/lib/truck-options";
-import { DEFAULT_MULTIPLIER, DEFAULT_SAR_PER_KM } from "@/lib/shipment-pricing-constants";
+import {
+  DEFAULT_COMPANY_PROFIT_MARGIN_PCT,
+  DEFAULT_KM_PER_PRICE_UNIT,
+  DEFAULT_SAR_PER_KM,
+} from "@/lib/shipment-pricing-constants";
 import { computeShipmentEstimateSar, type ShipmentPricingSettingsCore as ShipmentPricingSettings } from "@/lib/shipment-pricing-core";
 import { PhoneInput } from "@/components/phone-input";
 
@@ -53,6 +57,15 @@ const CompanyUnloadPermitUpload = dynamic(
   {
     ssr: false,
     loading: () => <div className="min-h-[5rem] animate-pulse rounded-lg bg-muted" aria-hidden />,
+  },
+);
+
+const CompanyShipmentInvoiceCard = dynamic(
+  () =>
+    import("@/components/company-shipment-invoice-card").then((m) => m.CompanyShipmentInvoiceCard),
+  {
+    ssr: false,
+    loading: () => <div className="min-h-[8rem] animate-pulse rounded-lg bg-muted" aria-hidden />,
   },
 );
 
@@ -102,6 +115,7 @@ type TrackingData = {
   adminPriceChangeNotice?: string | null;
   invoiceLink?: string | null;
   invoiceImageUrl?: string | null;
+  companyMarkedPaidAt?: string | null;
   unloadPermitRequired?: boolean;
   unloadPermitImageUrl?: string | null;
   createdAt?: string | number;
@@ -135,6 +149,13 @@ type HeroAccountData = {
     carType: string | null;
     carCapacity: string | null;
   } | null;
+};
+
+type ShipmentTermsContent = {
+  titleAr: string;
+  titleEn: string;
+  contentAr: string;
+  contentEn: string;
 };
 
 export function HeroSection({
@@ -218,11 +239,15 @@ export function HeroSection({
   const [otpSendLoading, setOtpSendLoading] = useState(false);
   const [codeVerifyLoading, setCodeVerifyLoading] = useState(false);
   const [otpResendLoading, setOtpResendLoading] = useState(false);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsLoading, setTermsLoading] = useState(false);
+  const [termsContent, setTermsContent] = useState<ShipmentTermsContent | null>(null);
 
   const [pricingSettings, setPricingSettings] = useState<ShipmentPricingSettings>({
     sarPerKm: DEFAULT_SAR_PER_KM,
-    multiplier: DEFAULT_MULTIPLIER,
-    distanceMultiplier: 1,
+    kmPerPriceUnit: DEFAULT_KM_PER_PRICE_UNIT,
+    companyProfitMarginPct: DEFAULT_COMPANY_PROFIT_MARGIN_PCT,
     detailsNote: null,
     modifiers: { shipmentType: {}, truckSize: {}, truckType: {} },
   });
@@ -239,14 +264,14 @@ export function HeroSection({
             typeof data.sarPerKm === "number" && Number.isFinite(data.sarPerKm)
               ? data.sarPerKm
               : DEFAULT_SAR_PER_KM,
-          multiplier:
-            typeof data.multiplier === "number" && Number.isFinite(data.multiplier)
-              ? data.multiplier
-              : DEFAULT_MULTIPLIER,
-          distanceMultiplier:
-            typeof data.distanceMultiplier === "number" && Number.isFinite(data.distanceMultiplier) && data.distanceMultiplier > 0
-              ? data.distanceMultiplier
-              : 1,
+          kmPerPriceUnit:
+            typeof data.kmPerPriceUnit === "number" && Number.isFinite(data.kmPerPriceUnit) && data.kmPerPriceUnit > 0
+              ? data.kmPerPriceUnit
+              : DEFAULT_KM_PER_PRICE_UNIT,
+          companyProfitMarginPct:
+            typeof data.companyProfitMarginPct === "number" && Number.isFinite(data.companyProfitMarginPct) && data.companyProfitMarginPct >= 0
+              ? data.companyProfitMarginPct
+              : DEFAULT_COMPANY_PROFIT_MARGIN_PCT,
           detailsNote:
             typeof data.detailsNote === "string" && data.detailsNote.trim()
               ? data.detailsNote.trim()
@@ -258,6 +283,45 @@ export function HeroSection({
         });
       } catch {
         /* keep defaults */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setTermsLoading(true);
+    void (async () => {
+      try {
+        const res = await fetch("/api/shipment-terms");
+        const data = await res.json().catch(() => ({}));
+        if (!cancelled && res.ok) {
+          setTermsContent({
+            titleAr: typeof data?.titleAr === "string" ? data.titleAr : "الشروط والأحكام",
+            titleEn: typeof data?.titleEn === "string" ? data.titleEn : "Terms and Conditions",
+            contentAr:
+              typeof data?.contentAr === "string"
+                ? data.contentAr
+                : "باستخدامك خدمة إرسال طلب الشحن فإنك توافق على الشروط والأحكام المعتمدة.",
+            contentEn:
+              typeof data?.contentEn === "string"
+                ? data.contentEn
+                : "By using shipment request submission, you agree to the platform terms and conditions.",
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          setTermsContent({
+            titleAr: "الشروط والأحكام",
+            titleEn: "Terms and Conditions",
+            contentAr: "باستخدامك خدمة إرسال طلب الشحن فإنك توافق على الشروط والأحكام المعتمدة.",
+            contentEn: "By using shipment request submission, you agree to the platform terms and conditions.",
+          });
+        }
+      } finally {
+        if (!cancelled) setTermsLoading(false);
       }
     })();
     return () => {
@@ -528,6 +592,30 @@ export function HeroSection({
     }
   };
 
+  const openTermsBeforeSubmit = (payload: ShipmentPayload) => {
+    setPendingShipmentPayload(payload);
+    setTermsAccepted(false);
+    setTermsModalOpen(true);
+  };
+
+  const continueSubmitAfterTerms = async () => {
+    if (!pendingShipmentPayload) return;
+    const payload = pendingShipmentPayload;
+    setTermsModalOpen(false);
+
+    if (!canShip) {
+      setGuestPhone(payload.phone.trim());
+      setGuestStep("email");
+      setVerifyCode("");
+      setGuestSubmitError(null);
+      setGuestModalOpen(true);
+      return;
+    }
+
+    setPendingShipmentPayload(null);
+    await sendShipmentRequest(payload);
+  };
+
   const submitShipmentRequest = async () => {
     setSubmitResult(null);
     const from = fromLoc?.address?.trim() ?? "";
@@ -580,17 +668,7 @@ export function HeroSection({
       unloadPermitRequired,
     };
 
-    if (!canShip) {
-      setPendingShipmentPayload(payload);
-      setGuestPhone(shipperPhone.trim());
-      setGuestStep("email");
-      setVerifyCode("");
-      setGuestSubmitError(null);
-      setGuestModalOpen(true);
-      return;
-    }
-
-    await sendShipmentRequest(payload);
+    openTermsBeforeSubmit(payload);
   };
 
   const sendRegistrationOtp = async () => {
@@ -1397,45 +1475,40 @@ export function HeroSection({
                             </div>
                           )}
                         {effectiveUserRole === "COMPANY" &&
-                          typeof (trackingResult.data as { invoiceLink?: string | null }).invoiceLink ===
-                            "string" &&
-                          String((trackingResult.data as { invoiceLink?: string | null }).invoiceLink).trim() !==
-                            "" && (
-                            <div className="mt-2 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm text-foreground space-y-2">
-                              <div className="font-semibold">{t("hero.invoiceLinkTitle")}</div>
-                              <a
-                                href={String(
-                                  (trackingResult.data as { invoiceLink: string }).invoiceLink,
-                                ).trim()}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-block font-medium text-primary underline underline-offset-2 break-all"
-                              >
-                                {t("hero.invoiceLinkOpen")}
-                              </a>
-                            </div>
+                          trackingResult.data?.id != null &&
+                          ["ADMIN_APPROVED", "AWAITING_PAYMENT_APPROVAL", "COMPLETE"].includes(
+                            String(trackingResult.data.status),
+                          ) && (
+                            <CompanyShipmentInvoiceCard
+                              requestId={String(trackingResult.data.id)}
+                              locale={locale === "ar" ? "ar" : "en"}
+                              extra={
+                                ["ADMIN_APPROVED", "AWAITING_PAYMENT_APPROVAL"].includes(
+                                  String(trackingResult.data.status),
+                                ) ? (
+                                  <CompanyInvoiceProofUpload
+                                    requestId={String(trackingResult.data.id)}
+                                    initialImageUrl={
+                                      (trackingResult.data as { invoiceImageUrl?: string | null })
+                                        .invoiceImageUrl ?? null
+                                    }
+                                    initialPaidAt={
+                                      (trackingResult.data as { companyMarkedPaidAt?: string | null })
+                                        .companyMarkedPaidAt ?? null
+                                    }
+                                    onSaved={() =>
+                                      void trackShipmentRequest(String(trackingResult.data.id))
+                                    }
+                                  />
+                                ) : null
+                              }
+                            />
                           )}
                         {trackingResult.data?.status === "AWAITING_PAYMENT_APPROVAL" && (
                           <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
                             {t("hero.paymentProofPendingAdmin")}
                           </p>
                         )}
-                        {effectiveUserRole === "COMPANY" &&
-                          trackingResult.data?.id != null &&
-                          ["ADMIN_APPROVED", "AWAITING_PAYMENT_APPROVAL"].includes(
-                            String(trackingResult.data.status),
-                          ) && (
-                            <CompanyInvoiceProofUpload
-                              requestId={String(trackingResult.data.id)}
-                              initialImageUrl={
-                                (trackingResult.data as { invoiceImageUrl?: string | null })
-                                  .invoiceImageUrl ?? null
-                              }
-                              onSaved={() =>
-                                void trackShipmentRequest(String(trackingResult.data.id))
-                              }
-                            />
-                          )}
                         {effectiveUserRole === "COMPANY" &&
                           trackingResult.data?.id != null &&
                           trackingResult.data?.unloadPermitRequired === true &&
@@ -1809,6 +1882,64 @@ export function HeroSection({
           </div>
         </div>
       </div>
+
+      {termsModalOpen && (
+        <div className="fixed inset-0 z-[69] flex items-center justify-center bg-black/55 px-4">
+          <div
+            className="w-full max-w-2xl rounded-2xl border border-border bg-background p-5 shadow-2xl sm:p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="shipment-terms-title"
+          >
+            <h4 id="shipment-terms-title" className="text-lg font-bold text-foreground">
+              {locale === "ar"
+                ? (termsContent?.titleAr || "الشروط والأحكام")
+                : (termsContent?.titleEn || "Terms and Conditions")}
+            </h4>
+            <p className="mt-1 text-sm text-muted-foreground">{t("hero.termsPrompt")}</p>
+
+            <div className="mt-4 max-h-[45vh] overflow-y-auto rounded-lg border border-border bg-muted/20 p-3 text-sm leading-relaxed whitespace-pre-wrap">
+              {termsLoading
+                ? t("common.loading")
+                : locale === "ar"
+                  ? (termsContent?.contentAr || "")
+                  : (termsContent?.contentEn || "")}
+            </div>
+
+            <label className="mt-4 flex items-start gap-2 rounded-lg border border-border bg-muted/10 p-3 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5 size-4 accent-primary"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+              />
+              <span>{t("hero.termsAgreeLabel")}</span>
+            </label>
+
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setTermsModalOpen(false);
+                  setTermsAccepted(false);
+                  setPendingShipmentPayload(null);
+                }}
+                className="inline-flex items-center justify-center h-11 px-5 rounded-xl border border-border text-foreground hover:bg-muted transition-colors"
+              >
+                {t("common.close")}
+              </button>
+              <button
+                type="button"
+                onClick={() => void continueSubmitAfterTerms()}
+                disabled={!termsAccepted || submitLoading}
+                className="inline-flex items-center justify-center h-11 px-5 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 disabled:opacity-70 disabled:cursor-not-allowed transition-colors"
+              >
+                {t("hero.termsSubmit")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {guestModalOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/55 px-4">

@@ -10,15 +10,23 @@ const MAX_BYTES = 4 * 1024 * 1024;
 type Props = {
   requestId: string;
   initialImageUrl: string | null;
+  initialPaidAt: string | null;
   onSaved: () => void;
 };
 
-export function CompanyInvoiceProofUpload({ requestId, initialImageUrl, onSaved }: Props) {
+export function CompanyInvoiceProofUpload({ requestId, initialImageUrl, initialPaidAt, onSaved }: Props) {
   const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [paidConfirmed, setPaidConfirmed] = useState(Boolean(initialPaidAt));
+  const [markingPaid, setMarkingPaid] = useState(false);
+  const hasUploadedProof = Boolean(initialImageUrl);
+
+  useEffect(() => {
+    setPaidConfirmed(Boolean(initialPaidAt));
+  }, [initialPaidAt]);
 
   const { startUpload, isUploading } = useUploadThing("invoiceProof", {
     onUploadError: () => {
@@ -100,7 +108,27 @@ export function CompanyInvoiceProofUpload({ requestId, initialImageUrl, onSaved 
     }
   };
 
-  const busy = isUploading || saving;
+  const onMarkPaid = async () => {
+    if (markingPaid || paidConfirmed) return;
+    setError(null);
+    setMarkingPaid(true);
+    try {
+      const r = await fetch(`/api/shipment-requests/${requestId}/mark-paid`, { method: "POST" });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setError((data.error as string) ?? t("hero.invoiceMarkPaidError"));
+        return;
+      }
+      setPaidConfirmed(true);
+      onSaved();
+    } catch {
+      setError(t("hero.invoiceMarkPaidError"));
+    } finally {
+      setMarkingPaid(false);
+    }
+  };
+
+  const busy = isUploading || saving || markingPaid;
   const btnClass =
     "min-h-9 flex-1 rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50";
 
@@ -110,6 +138,25 @@ export function CompanyInvoiceProofUpload({ requestId, initialImageUrl, onSaved 
 
       <div className="mt-3 font-semibold text-foreground">{t("hero.invoiceProofTitle")}</div>
       <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{t("hero.invoiceProofHint")}</p>
+      <div className="mt-3 rounded-lg border border-border bg-muted/20 p-2">
+        {paidConfirmed ? (
+          <p className="text-xs font-medium text-emerald-700">{t("hero.invoiceMarkPaidDone")}</p>
+        ) : (
+          <div className="space-y-1.5">
+            <button
+              type="button"
+              className={twMerge(btnClass, "bg-primary text-primary-foreground hover:bg-primary/90 w-full")}
+              onClick={onMarkPaid}
+              disabled={busy || !hasUploadedProof}
+            >
+              {markingPaid ? t("hero.invoiceProofSaving") : t("hero.invoiceMarkPaid")}
+            </button>
+            {!hasUploadedProof ? (
+              <p className="text-xs text-muted-foreground">{t("hero.invoiceMarkPaidNeedsProof")}</p>
+            ) : null}
+          </div>
+        )}
+      </div>
 
       {initialImageUrl ? (
         <div className="mt-2 space-y-2">

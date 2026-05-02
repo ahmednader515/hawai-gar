@@ -23,6 +23,9 @@ export function formatSarAmount(amount: number, locale: AppLocale = "ar"): strin
 export function sarAmountInWords(amount: number, locale: AppLocale = "ar"): string {
   const n = Math.round(amount);
   if (!Number.isFinite(n) || n < 0 || n > 999999999999999) return "";
+  if (n === 0) {
+    return locale === "en" ? "Zero Saudi Riyals" : "صفر ريال سعودي";
+  }
 
   if (locale === "en") {
     try {

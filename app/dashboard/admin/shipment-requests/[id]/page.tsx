@@ -22,6 +22,7 @@ import {
   getCompatiblePlatformDrivers,
   getCompatibleShipmentCompanies,
 } from "@/lib/shipment-company-compatibility";
+import { computeShipmentEstimateSar, getShipmentPricingSettings } from "@/lib/shipment-pricing";
 
 function statusBadgeClass(status: string): string {
   switch (status) {
@@ -110,7 +111,6 @@ export default async function AdminShipmentRequestDetailsPage({
       notes: true,
       phone: true,
       estimatedPriceSar: true,
-      invoiceLink: true,
       invoiceImageUrl: true,
       unloadPermitRequired: true,
       unloadPermitImageUrl: true,
@@ -308,6 +308,29 @@ export default async function AdminShipmentRequestDetailsPage({
 
   const da = "dashboard.admin";
 
+  const pricing = await getShipmentPricingSettings();
+  const canComputePricing =
+    typeof r.distanceKm === "number" && Number.isFinite(r.distanceKm) && r.distanceKm > 0;
+  const requestPriceSar =
+    canComputePricing
+      ? computeShipmentEstimateSar(
+          r.distanceKm as number,
+          { ...pricing, companyProfitMarginPct: 0 },
+          {
+            shipmentType: r.shipmentType ? String(r.shipmentType) : null,
+            truckSize: r.containerSize ? String(r.containerSize) : null,
+            truckType: r.containersCount ? String(r.containersCount) : null,
+          },
+        )
+      : null;
+  const finalPriceSar = typeof r.priceSar === "number" && Number.isFinite(r.priceSar) ? r.priceSar : null;
+  const profitSar =
+    requestPriceSar != null && finalPriceSar != null ? finalPriceSar - requestPriceSar : null;
+  const profitPct =
+    requestPriceSar != null && requestPriceSar > 0 && profitSar != null
+      ? (profitSar / requestPriceSar) * 100
+      : null;
+
   return (
     <div className="mx-auto w-full min-w-0 max-w-5xl space-y-6 pb-10">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
@@ -440,6 +463,33 @@ export default async function AdminShipmentRequestDetailsPage({
                       locale={locale}
                       amountClassName="text-base font-bold tabular-nums text-foreground"
                     />
+                  ) : (
+                    "—"
+                  )}
+                </DetailField>
+                <DetailField label={t(`${da}.shipmentDetailFieldRequestPrice`)}>
+                  {requestPriceSar != null ? (
+                    <SarPriceDisplay
+                      amount={requestPriceSar}
+                      locale={locale}
+                      amountClassName="text-base font-bold tabular-nums text-foreground"
+                    />
+                  ) : (
+                    "—"
+                  )}
+                </DetailField>
+                <DetailField label={t(`${da}.shipmentDetailFieldProfit`)}>
+                  {profitSar != null && profitPct != null ? (
+                    <span className="inline-flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                      <SarPriceDisplay
+                        amount={profitSar}
+                        locale={locale}
+                        amountClassName="text-base font-bold tabular-nums text-foreground"
+                      />
+                      <span className="text-xs font-semibold text-muted-foreground tabular-nums">
+                        ({profitPct.toFixed(1)}%)
+                      </span>
+                    </span>
                   ) : (
                     "—"
                   )}
@@ -714,7 +764,6 @@ export default async function AdminShipmentRequestDetailsPage({
                 status={r.status}
                 priceSar={r.priceSar ?? null}
                 estimatedPriceSar={r.estimatedPriceSar ?? null}
-                invoiceLink={r.invoiceLink ?? null}
                 invoiceImageUrl={r.invoiceImageUrl ?? null}
                 unloadPermitRequired={r.unloadPermitRequired}
                 unloadPermitImageUrl={r.unloadPermitImageUrl ?? null}

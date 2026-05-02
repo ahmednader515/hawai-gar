@@ -24,8 +24,8 @@ export async function PATCH(req: Request) {
   try {
     const body = await req.json();
     const sarRaw = body?.sarPerKm;
-    const multRaw = body?.multiplier;
-    const distMultRaw = body?.distanceMultiplier;
+    const kmUnitRaw = body?.kmPerPriceUnit;
+    const profitPctRaw = body?.companyProfitMarginPct;
     const detailsRaw = body?.detailsNote;
     const modifiersRaw = body?.modifiers;
 
@@ -35,13 +35,13 @@ export async function PATCH(req: Request) {
       const n = typeof sarRaw === "number" ? sarRaw : Number(sarRaw);
       payload.sarPerKm = n;
     }
-    if (multRaw !== undefined) {
-      const n = typeof multRaw === "number" ? multRaw : Number(multRaw);
-      payload.multiplier = n;
+    if (kmUnitRaw !== undefined) {
+      const n = typeof kmUnitRaw === "number" ? kmUnitRaw : Number(kmUnitRaw);
+      payload.kmPerPriceUnit = n;
     }
-    if (distMultRaw !== undefined) {
-      const n = typeof distMultRaw === "number" ? distMultRaw : Number(distMultRaw);
-      payload.distanceMultiplier = n;
+    if (profitPctRaw !== undefined) {
+      const n = typeof profitPctRaw === "number" ? profitPctRaw : Number(profitPctRaw);
+      payload.companyProfitMarginPct = n;
     }
     if (detailsRaw !== undefined) {
       payload.detailsNote =
@@ -80,7 +80,8 @@ export async function PATCH(req: Request) {
     return NextResponse.json(s);
   } catch (e) {
     console.error(e);
-    const msg = e instanceof Error && e.message.startsWith("invalid_") ? "Invalid values" : "Failed to save pricing";
+    const msg =
+      e instanceof Error && e.message.startsWith("invalid_") ? "Invalid values" : "Failed to save pricing";
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 }

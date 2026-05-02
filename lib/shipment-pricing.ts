@@ -1,13 +1,23 @@
 import { prisma } from "@/lib/db";
-import { DEFAULT_MULTIPLIER, DEFAULT_SAR_PER_KM } from "@/lib/shipment-pricing-constants";
+import {
+  DEFAULT_COMPANY_PROFIT_MARGIN_PCT,
+  DEFAULT_KM_PER_PRICE_UNIT,
+  DEFAULT_SAR_PER_KM,
+} from "@/lib/shipment-pricing-constants";
 import { type ShipmentPricingSettingsCore } from "@/lib/shipment-pricing-core";
 
-export { DEFAULT_MULTIPLIER, DEFAULT_SAR_PER_KM } from "@/lib/shipment-pricing-constants";
+export {
+  DEFAULT_COMPANY_PROFIT_MARGIN_PCT,
+  DEFAULT_KM_PER_PRICE_UNIT,
+  DEFAULT_SAR_PER_KM,
+} from "@/lib/shipment-pricing-constants";
 export { computeShipmentEstimateSar } from "@/lib/shipment-pricing-core";
 
 const KEY_SAR_PER_KM = "shipment_price_sar_per_km";
+// Legacy: used to store a multiplicative factor (e.g. 1.15). We keep reading it for back-compat.
 const KEY_MULTIPLIER = "shipment_price_multiplier";
-const KEY_DISTANCE_MULTIPLIER = "shipment_distance_multiplier";
+const KEY_KM_PER_PRICE_UNIT = "shipment_price_km_per_unit";
+const KEY_COMPANY_PROFIT_MARGIN_PCT = "shipment_company_profit_margin_pct";
 const KEY_DETAILS = "shipment_pricing_details";
 const KEY_MODIFIERS = "shipment_pricing_modifiers_v1";
 
@@ -61,25 +71,34 @@ function safeParseModifiers(raw: string | undefined | null): ShipmentPricingSett
 
 export async function getShipmentPricingSettings(): Promise<ShipmentPricingSettings> {
   try {
-    const [sarRow, multRow, distMultRow, detailsRow, modifiersRow] = await Promise.all([
+    const [sarRow, kmUnitRow, profitPctRow, legacyMultRow, detailsRow, modifiersRow] = await Promise.all([
       prisma.siteSetting.findUnique({ where: { key: KEY_SAR_PER_KM } }),
+      prisma.siteSetting.findUnique({ where: { key: KEY_KM_PER_PRICE_UNIT } }),
+      prisma.siteSetting.findUnique({ where: { key: KEY_COMPANY_PROFIT_MARGIN_PCT } }),
       prisma.siteSetting.findUnique({ where: { key: KEY_MULTIPLIER } }),
-      prisma.siteSetting.findUnique({ where: { key: KEY_DISTANCE_MULTIPLIER } }),
       prisma.siteSetting.findUnique({ where: { key: KEY_DETAILS } }),
       prisma.siteSetting.findUnique({ where: { key: KEY_MODIFIERS } }),
     ]);
+
+    const parsedProfitPct = profitPctRow?.value ? parsePositiveNum(profitPctRow.value, DEFAULT_COMPANY_PROFIT_MARGIN_PCT) : null;
+    const legacyMultiplier = legacyMultRow?.value ? parsePositiveNum(legacyMultRow.value, 1) : 1;
+    const derivedProfitPct =
+      legacyMultiplier > 0 && Number.isFinite(legacyMultiplier)
+        ? Math.max(0, (legacyMultiplier - 1) * 100)
+        : 0;
+
     return {
       sarPerKm: parsePositiveNum(sarRow?.value, DEFAULT_SAR_PER_KM),
-      multiplier: parsePositiveNum(multRow?.value, DEFAULT_MULTIPLIER),
-      distanceMultiplier: parsePositiveNum(distMultRow?.value, 1),
+      kmPerPriceUnit: parsePositiveNum(kmUnitRow?.value, DEFAULT_KM_PER_PRICE_UNIT),
+      companyProfitMarginPct: parsedProfitPct ?? derivedProfitPct,
       detailsNote: detailsRow?.value?.trim() ? detailsRow.value.trim() : null,
       modifiers: safeParseModifiers(modifiersRow?.value),
     };
   } catch {
     return {
       sarPerKm: DEFAULT_SAR_PER_KM,
-      multiplier: DEFAULT_MULTIPLIER,
-      distanceMultiplier: 1,
+      kmPerPriceUnit: DEFAULT_KM_PER_PRICE_UNIT,
+      companyProfitMarginPct: DEFAULT_COMPANY_PROFIT_MARGIN_PCT,
       detailsNote: null,
       modifiers: { shipmentType: {}, truckSize: {}, truckType: {} },
     };
@@ -88,8 +107,8 @@ export async function getShipmentPricingSettings(): Promise<ShipmentPricingSetti
 
 export async function setShipmentPricingSettings(data: {
   sarPerKm?: number;
-  multiplier?: number;
-  distanceMultiplier?: number;
+  kmPerPriceUnit?: number;
+  companyProfitMarginPct?: number;
   detailsNote?: string | null;
   modifiers?: ShipmentPricingSettings["modifiers"];
 }): Promise<ShipmentPricingSettings> {
@@ -103,24 +122,24 @@ export async function setShipmentPricingSettings(data: {
       update: { value: String(data.sarPerKm) },
     });
   }
-  if (data.multiplier !== undefined) {
-    if (!Number.isFinite(data.multiplier) || data.multiplier <= 0) {
-      throw new Error("invalid_multiplier");
+  if (data.kmPerPriceUnit !== undefined) {
+    if (!Number.isFinite(data.kmPerPriceUnit) || data.kmPerPriceUnit <= 0) {
+      throw new Error("invalid_km_per_price_unit");
     }
     await prisma.siteSetting.upsert({
-      where: { key: KEY_MULTIPLIER },
-      create: { key: KEY_MULTIPLIER, value: String(data.multiplier) },
-      update: { value: String(data.multiplier) },
+      where: { key: KEY_KM_PER_PRICE_UNIT },
+      create: { key: KEY_KM_PER_PRICE_UNIT, value: String(data.kmPerPriceUnit) },
+      update: { value: String(data.kmPerPriceUnit) },
     });
   }
-  if (data.distanceMultiplier !== undefined) {
-    if (!Number.isFinite(data.distanceMultiplier) || data.distanceMultiplier <= 0) {
-      throw new Error("invalid_distance_multiplier");
+  if (data.companyProfitMarginPct !== undefined) {
+    if (!Number.isFinite(data.companyProfitMarginPct) || data.companyProfitMarginPct < 0) {
+      throw new Error("invalid_company_profit_margin_pct");
     }
     await prisma.siteSetting.upsert({
-      where: { key: KEY_DISTANCE_MULTIPLIER },
-      create: { key: KEY_DISTANCE_MULTIPLIER, value: String(data.distanceMultiplier) },
-      update: { value: String(data.distanceMultiplier) },
+      where: { key: KEY_COMPANY_PROFIT_MARGIN_PCT },
+      create: { key: KEY_COMPANY_PROFIT_MARGIN_PCT, value: String(data.companyProfitMarginPct) },
+      update: { value: String(data.companyProfitMarginPct) },
     });
   }
   if (data.detailsNote !== undefined) {

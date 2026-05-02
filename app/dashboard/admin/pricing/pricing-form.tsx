@@ -29,21 +29,24 @@ function PercentInput({
   onValueChange,
   disabled,
   ariaLabel,
+  className,
 }: {
   value: string;
   onValueChange: (next: string) => void;
   disabled?: boolean;
   ariaLabel: string;
+  className?: string;
 }) {
   return (
     <div className="relative">
       <Input
+        id="pricing-profit"
         inputMode="decimal"
         min={0}
         max={100}
         value={value}
         onChange={(e) => onValueChange(clampPercentString(e.target.value))}
-        className="h-9 w-20 text-right tabular-nums pe-6"
+        className={className ?? "h-9 w-20 text-right tabular-nums pe-6"}
         aria-label={ariaLabel}
         disabled={disabled}
       />
@@ -57,8 +60,8 @@ function PercentInput({
 export function AdminPricingForm({ initial }: { initial: ShipmentPricingSettings }) {
   const { t } = useI18n();
   const [sarPerKm, setSarPerKm] = useState(String(initial.sarPerKm));
-  const [multiplier, setMultiplier] = useState(String(initial.multiplier));
-  const [distanceMultiplier, setDistanceMultiplier] = useState(String(initial.distanceMultiplier ?? 1));
+  const [kmPerPriceUnit, setKmPerPriceUnit] = useState(String(initial.kmPerPriceUnit ?? 1));
+  const [companyProfitMarginPct, setCompanyProfitMarginPct] = useState(String(initial.companyProfitMarginPct ?? 0));
   const [detailsNote, setDetailsNote] = useState(initial.detailsNote ?? "");
   const [modShipmentTypeSar, setModShipmentTypeSar] = useState<Record<string, string>>({});
   const [modShipmentTypePct, setModShipmentTypePct] = useState<Record<string, string>>({});
@@ -84,8 +87,8 @@ export function AdminPricingForm({ initial }: { initial: ShipmentPricingSettings
 
   useEffect(() => {
     setSarPerKm(String(initial.sarPerKm));
-    setMultiplier(String(initial.multiplier));
-    setDistanceMultiplier(String(initial.distanceMultiplier ?? 1));
+    setKmPerPriceUnit(String(initial.kmPerPriceUnit ?? 1));
+    setCompanyProfitMarginPct(String(initial.companyProfitMarginPct ?? 0));
     setDetailsNote(initial.detailsNote ?? "");
     setModShipmentTypeSar(Object.fromEntries(shipmentTypeOptions.map((k) => [k, String(initial.modifiers?.shipmentType?.[k]?.addSar ?? 0)])));
     setModShipmentTypePct(Object.fromEntries(shipmentTypeOptions.map((k) => [k, String(initial.modifiers?.shipmentType?.[k]?.pct ?? 0)])));
@@ -93,7 +96,7 @@ export function AdminPricingForm({ initial }: { initial: ShipmentPricingSettings
     setModTruckSizePct(Object.fromEntries(truckSizeOptions.map((k) => [k, String(initial.modifiers?.truckSize?.[k]?.pct ?? 0)])));
     setModTruckTypeSar(Object.fromEntries(truckTypeOptions.map((k) => [k, String(initial.modifiers?.truckType?.[k]?.addSar ?? 0)])));
     setModTruckTypePct(Object.fromEntries(truckTypeOptions.map((k) => [k, String(initial.modifiers?.truckType?.[k]?.pct ?? 0)])));
-  }, [initial.sarPerKm, initial.multiplier, initial.detailsNote]);
+  }, [initial.sarPerKm, initial.kmPerPriceUnit, initial.companyProfitMarginPct, initial.detailsNote]);
 
   useEffect(() => {
     // Ensure we initialize modifiers once even if initial effect doesn't run (TS/React strict).
@@ -109,6 +112,84 @@ export function AdminPricingForm({ initial }: { initial: ShipmentPricingSettings
   }, []);
 
   const hasPositiveValue = (raw: string | undefined) => parseNonNeg(raw) > 0;
+
+  const MoneyInput = ({
+    value,
+    onChange,
+    ariaLabel,
+    disabled,
+  }: {
+    value: string;
+    onChange: (next: string) => void;
+    ariaLabel: string;
+    disabled?: boolean;
+  }) => (
+    <Input
+      inputMode="decimal"
+      placeholder="0"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="h-9 w-24 text-right tabular-nums"
+      aria-label={ariaLabel}
+      disabled={disabled}
+    />
+  );
+
+  const ModifierRow = ({
+    label,
+    sarValue,
+    pctValue,
+    onSarChange,
+    onPctChange,
+  }: {
+    label: string;
+    sarValue: string;
+    pctValue: string;
+    onSarChange: (next: string) => void;
+    onPctChange: (next: string) => void;
+  }) => {
+    const sarIsActive = hasPositiveValue(sarValue);
+    const pctIsActive = hasPositiveValue(pctValue);
+    return (
+      <div className="grid grid-cols-1 gap-2 rounded-lg border border-border bg-background px-3 py-2 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center sm:gap-3">
+        <div className="min-w-0">
+          <div className="text-sm font-medium text-foreground truncate">{label}</div>
+          <div className="text-[11px] text-muted-foreground sm:hidden">
+            {t("dashboard.admin.pricingModifiersExclusiveHint")}
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-2 sm:justify-end">
+          <span className="text-xs text-muted-foreground sm:hidden">
+            {t("dashboard.admin.pricingModifiersSarCol")}
+          </span>
+          <MoneyInput
+            value={sarValue}
+            onChange={(next) => {
+              onSarChange(next);
+              if (hasPositiveValue(next)) onPctChange("0");
+            }}
+            ariaLabel={`${label} add SAR`}
+            disabled={pctIsActive}
+          />
+        </div>
+        <div className="flex items-center justify-between gap-2 sm:justify-end">
+          <span className="text-xs text-muted-foreground sm:hidden">
+            {t("dashboard.admin.pricingModifiersPctCol")}
+          </span>
+          <PercentInput
+            value={pctValue}
+            onValueChange={(next) => {
+              onPctChange(next);
+              if (hasPositiveValue(next)) onSarChange("0");
+            }}
+            ariaLabel={`${label} percent`}
+            disabled={sarIsActive}
+            className="h-9 w-20 text-right tabular-nums pe-6"
+          />
+        </div>
+      </div>
+    );
+  };
 
   const mergeValueMaps = (sarMap: Record<string, string>, pctMap: Record<string, string>) => {
     const keys = new Set([...Object.keys(sarMap), ...Object.keys(pctMap)]);
@@ -135,15 +216,15 @@ export function AdminPricingForm({ initial }: { initial: ShipmentPricingSettings
     setSaving(true);
     try {
       const sar = parseFloat(sarPerKm.replace(",", "."));
-      const mult = parseFloat(multiplier.replace(",", "."));
-      const distMult = parseFloat(distanceMultiplier.replace(",", "."));
+      const kmUnit = parseFloat(kmPerPriceUnit.replace(",", "."));
+      const profitPct = parseFloat(companyProfitMarginPct.replace(",", "."));
       const res = await fetch("/api/admin/pricing", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sarPerKm: sar,
-          multiplier: mult,
-          distanceMultiplier: distMult,
+          kmPerPriceUnit: kmUnit,
+          companyProfitMarginPct: profitPct,
           detailsNote: detailsNote.trim() || null,
           modifiers: {
             shipmentType: mergeValueMaps(modShipmentTypeSar, modShipmentTypePct),
@@ -158,8 +239,8 @@ export function AdminPricingForm({ initial }: { initial: ShipmentPricingSettings
         return;
       }
       if (typeof data.sarPerKm === "number") setSarPerKm(String(data.sarPerKm));
-      if (typeof data.multiplier === "number") setMultiplier(String(data.multiplier));
-      if (typeof data.distanceMultiplier === "number") setDistanceMultiplier(String(data.distanceMultiplier));
+      if (typeof data.kmPerPriceUnit === "number") setKmPerPriceUnit(String(data.kmPerPriceUnit));
+      if (typeof data.companyProfitMarginPct === "number") setCompanyProfitMarginPct(String(data.companyProfitMarginPct));
       setDetailsNote(typeof data.detailsNote === "string" ? data.detailsNote : "");
       setMessage({ type: "success", text: t("dashboard.admin.pricingSaveSuccess") });
     } catch {
@@ -174,39 +255,40 @@ export function AdminPricingForm({ initial }: { initial: ShipmentPricingSettings
       <div className="rounded-xl border border-border bg-card p-4 space-y-4">
         <div className="space-y-2">
           <Label htmlFor="pricing-sar-km">{t("dashboard.admin.pricingSarPerKmLabel")}</Label>
-          <Input
-            id="pricing-sar-km"
-            inputMode="decimal"
-            value={sarPerKm}
-            onChange={(e) => setSarPerKm(e.target.value)}
-            className="h-11"
-            required
-          />
+          <div className="flex items-center gap-2">
+            <Input
+              id="pricing-sar-km"
+              inputMode="decimal"
+              value={sarPerKm}
+              onChange={(e) => setSarPerKm(e.target.value)}
+              className="h-11"
+              required
+            />
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">{t("dashboard.admin.pricingSarPerKmPerLabel")}</span>
+              <Input
+                inputMode="numeric"
+                value={kmPerPriceUnit}
+                onChange={(e) => setKmPerPriceUnit(e.target.value.replace(/[^\d.,]/g, ""))}
+                className="h-9 w-16 text-right tabular-nums"
+                aria-label={t("dashboard.admin.pricingKmPerUnitAria")}
+                required
+              />
+              <span className="text-xs text-muted-foreground">{t("dashboard.admin.pricingSarPerKmPerSuffix")}</span>
+            </div>
+          </div>
           <p className="text-xs text-muted-foreground">{t("dashboard.admin.pricingSarPerKmHint")}</p>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="pricing-multiplier">{t("dashboard.admin.pricingMultiplierLabel")}</Label>
-          <Input
-            id="pricing-multiplier"
-            inputMode="decimal"
-            value={multiplier}
-            onChange={(e) => setMultiplier(e.target.value)}
-            className="h-11"
-            required
-          />
-          <p className="text-xs text-muted-foreground">{t("dashboard.admin.pricingMultiplierHint")}</p>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="pricing-distance-mult">{t("dashboard.admin.pricingDistanceMultiplierLabel")}</Label>
-          <Input
-            id="pricing-distance-mult"
-            inputMode="decimal"
-            value={distanceMultiplier}
-            onChange={(e) => setDistanceMultiplier(e.target.value)}
-            className="h-11"
-            required
-          />
-          <p className="text-xs text-muted-foreground">{t("dashboard.admin.pricingDistanceMultiplierHint")}</p>
+          <Label htmlFor="pricing-profit">{t("dashboard.admin.pricingCompanyProfitMarginLabel")}</Label>
+          <div className="flex items-center justify-between gap-3">
+            <PercentInput
+              value={companyProfitMarginPct}
+              onValueChange={setCompanyProfitMarginPct}
+              ariaLabel={t("dashboard.admin.pricingCompanyProfitMarginAria")}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">{t("dashboard.admin.pricingCompanyProfitMarginHint")}</p>
         </div>
       </div>
 
@@ -218,114 +300,63 @@ export function AdminPricingForm({ initial }: { initial: ShipmentPricingSettings
 
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-foreground">{t("dashboard.admin.pricingModifiersShipmentType")}</h3>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="hidden sm:grid sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center sm:gap-3 px-3">
+            <div className="text-xs font-medium text-muted-foreground">{t("dashboard.admin.pricingModifiersItemCol")}</div>
+            <div className="text-xs font-medium text-muted-foreground text-right">{t("dashboard.admin.pricingModifiersSarCol")}</div>
+            <div className="text-xs font-medium text-muted-foreground text-right">{t("dashboard.admin.pricingModifiersPctCol")}</div>
+          </div>
+          <div className="space-y-2">
             {shipmentTypeOptions.map((k) => (
-              <div key={`st-${k}`} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2">
-                <span className="text-sm text-foreground">{k}</span>
-                <div className="flex items-center gap-2">
-                  <Input
-                    inputMode="decimal"
-                    value={modShipmentTypeSar[k] ?? "0"}
-                    onChange={(e) => {
-                      const next = e.target.value;
-                      setModShipmentTypeSar((prev) => ({ ...prev, [k]: next }));
-                      if (hasPositiveValue(next)) {
-                        setModShipmentTypePct((prev) => ({ ...prev, [k]: "0" }));
-                      }
-                    }}
-                    className="h-9 w-24 text-right tabular-nums"
-                    aria-label={`${k} add SAR`}
-                    disabled={hasPositiveValue(modShipmentTypePct[k])}
-                  />
-                  <PercentInput
-                    value={modShipmentTypePct[k] ?? "0"}
-                    onValueChange={(next) => {
-                      setModShipmentTypePct((prev) => ({ ...prev, [k]: next }));
-                      if (hasPositiveValue(next)) {
-                        setModShipmentTypeSar((prev) => ({ ...prev, [k]: "0" }));
-                      }
-                    }}
-                    ariaLabel={`${k} percent`}
-                    disabled={hasPositiveValue(modShipmentTypeSar[k])}
-                  />
-                </div>
-              </div>
+              <ModifierRow
+                key={`st-${k}`}
+                label={k}
+                sarValue={modShipmentTypeSar[k] ?? "0"}
+                pctValue={modShipmentTypePct[k] ?? "0"}
+                onSarChange={(next) => setModShipmentTypeSar((prev) => ({ ...prev, [k]: next }))}
+                onPctChange={(next) => setModShipmentTypePct((prev) => ({ ...prev, [k]: next }))}
+              />
             ))}
           </div>
         </div>
 
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-foreground">{t("dashboard.admin.pricingModifiersTruckSize")}</h3>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="hidden sm:grid sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center sm:gap-3 px-3">
+            <div className="text-xs font-medium text-muted-foreground">{t("dashboard.admin.pricingModifiersItemCol")}</div>
+            <div className="text-xs font-medium text-muted-foreground text-right">{t("dashboard.admin.pricingModifiersSarCol")}</div>
+            <div className="text-xs font-medium text-muted-foreground text-right">{t("dashboard.admin.pricingModifiersPctCol")}</div>
+          </div>
+          <div className="space-y-2">
             {truckSizeOptions.map((k) => (
-              <div key={`ts-${k}`} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2">
-                <span className="text-sm text-foreground">{k}</span>
-                <div className="flex items-center gap-2">
-                  <Input
-                    inputMode="decimal"
-                    value={modTruckSizeSar[k] ?? "0"}
-                    onChange={(e) => {
-                      const next = e.target.value;
-                      setModTruckSizeSar((prev) => ({ ...prev, [k]: next }));
-                      if (hasPositiveValue(next)) {
-                        setModTruckSizePct((prev) => ({ ...prev, [k]: "0" }));
-                      }
-                    }}
-                    className="h-9 w-24 text-right tabular-nums"
-                    aria-label={`${k} add SAR`}
-                    disabled={hasPositiveValue(modTruckSizePct[k])}
-                  />
-                  <PercentInput
-                    value={modTruckSizePct[k] ?? "0"}
-                    onValueChange={(next) => {
-                      setModTruckSizePct((prev) => ({ ...prev, [k]: next }));
-                      if (hasPositiveValue(next)) {
-                        setModTruckSizeSar((prev) => ({ ...prev, [k]: "0" }));
-                      }
-                    }}
-                    ariaLabel={`${k} percent`}
-                    disabled={hasPositiveValue(modTruckSizeSar[k])}
-                  />
-                </div>
-              </div>
+              <ModifierRow
+                key={`ts-${k}`}
+                label={k}
+                sarValue={modTruckSizeSar[k] ?? "0"}
+                pctValue={modTruckSizePct[k] ?? "0"}
+                onSarChange={(next) => setModTruckSizeSar((prev) => ({ ...prev, [k]: next }))}
+                onPctChange={(next) => setModTruckSizePct((prev) => ({ ...prev, [k]: next }))}
+              />
             ))}
           </div>
         </div>
 
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-foreground">{t("dashboard.admin.pricingModifiersTruckType")}</h3>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="hidden sm:grid sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center sm:gap-3 px-3">
+            <div className="text-xs font-medium text-muted-foreground">{t("dashboard.admin.pricingModifiersItemCol")}</div>
+            <div className="text-xs font-medium text-muted-foreground text-right">{t("dashboard.admin.pricingModifiersSarCol")}</div>
+            <div className="text-xs font-medium text-muted-foreground text-right">{t("dashboard.admin.pricingModifiersPctCol")}</div>
+          </div>
+          <div className="space-y-2">
             {truckTypeOptions.map((k) => (
-              <div key={`tt-${k}`} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2">
-                <span className="text-sm text-foreground">{k}</span>
-                <div className="flex items-center gap-2">
-                  <Input
-                    inputMode="decimal"
-                    value={modTruckTypeSar[k] ?? "0"}
-                    onChange={(e) => {
-                      const next = e.target.value;
-                      setModTruckTypeSar((prev) => ({ ...prev, [k]: next }));
-                      if (hasPositiveValue(next)) {
-                        setModTruckTypePct((prev) => ({ ...prev, [k]: "0" }));
-                      }
-                    }}
-                    className="h-9 w-24 text-right tabular-nums"
-                    aria-label={`${k} add SAR`}
-                    disabled={hasPositiveValue(modTruckTypePct[k])}
-                  />
-                  <PercentInput
-                    value={modTruckTypePct[k] ?? "0"}
-                    onValueChange={(next) => {
-                      setModTruckTypePct((prev) => ({ ...prev, [k]: next }));
-                      if (hasPositiveValue(next)) {
-                        setModTruckTypeSar((prev) => ({ ...prev, [k]: "0" }));
-                      }
-                    }}
-                    ariaLabel={`${k} percent`}
-                    disabled={hasPositiveValue(modTruckTypeSar[k])}
-                  />
-                </div>
-              </div>
+              <ModifierRow
+                key={`tt-${k}`}
+                label={k}
+                sarValue={modTruckTypeSar[k] ?? "0"}
+                pctValue={modTruckTypePct[k] ?? "0"}
+                onSarChange={(next) => setModTruckTypeSar((prev) => ({ ...prev, [k]: next }))}
+                onPctChange={(next) => setModTruckTypePct((prev) => ({ ...prev, [k]: next }))}
+              />
             ))}
           </div>
         </div>

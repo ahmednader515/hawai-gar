@@ -25,6 +25,7 @@ export function shouldClearWorkflowOnCarrierChange(fromStatus: string): boolean 
 export function workflowFieldsClearedOnCarrierChange(): {
   invoiceLink: null;
   invoiceImageUrl: null;
+  companyMarkedPaidAt: null;
   adminId: null;
   adminDecisionAt: null;
   adminPriceChanged: boolean;
@@ -33,6 +34,7 @@ export function workflowFieldsClearedOnCarrierChange(): {
   return {
     invoiceLink: null,
     invoiceImageUrl: null,
+    companyMarkedPaidAt: null,
     adminId: null,
     adminDecisionAt: null,
     adminPriceChanged: false,

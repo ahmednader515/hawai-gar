@@ -13,23 +13,25 @@ export type ShipmentPricingModifiers = {
 
 export type ShipmentPricingSettingsCore = {
   sarPerKm: number;
-  multiplier: number;
-  /** Multiplies the computed distance before pricing. Default: 1 */
-  distanceMultiplier: number;
+  /** Number of kilometers covered by `sarPerKm`. Default: 1 */
+  kmPerPriceUnit: number;
+  /** Company profit margin percentage added on top of the request price. */
+  companyProfitMarginPct: number;
   detailsNote: string | null;
   modifiers: ShipmentPricingModifiers;
 };
 
 export function computeShipmentEstimateSar(
   distanceKm: number,
-  settings: Pick<ShipmentPricingSettingsCore, "sarPerKm" | "multiplier" | "distanceMultiplier" | "modifiers">,
+  settings: Pick<
+    ShipmentPricingSettingsCore,
+    "sarPerKm" | "kmPerPriceUnit" | "companyProfitMarginPct" | "modifiers"
+  >,
   ctx?: { shipmentType?: string | null; truckSize?: string | null; truckType?: string | null }
 ): number {
-  const effectiveDistanceKm =
-    Number.isFinite(settings.distanceMultiplier) && settings.distanceMultiplier > 0
-      ? distanceKm * settings.distanceMultiplier
-      : distanceKm;
-  const base = effectiveDistanceKm * settings.sarPerKm * settings.multiplier;
+  const kmUnit =
+    Number.isFinite(settings.kmPerPriceUnit) && settings.kmPerPriceUnit > 0 ? settings.kmPerPriceUnit : 1;
+  const base = (distanceKm / kmUnit) * settings.sarPerKm;
   const shipmentTypeKey = ctx?.shipmentType?.trim?.() ? String(ctx.shipmentType).trim() : "";
   const truckSizeKey = ctx?.truckSize?.trim?.() ? String(ctx.truckSize).trim() : "";
   const truckTypeKey = ctx?.truckType?.trim?.() ? String(ctx.truckType).trim() : "";
@@ -48,6 +50,12 @@ export function computeShipmentEstimateSar(
   );
 
   const pctFactor = 1 + pct / 100;
-  return base * pctFactor + addSar;
+  const requestPrice = base * pctFactor + addSar;
+  const profitPct =
+    Number.isFinite(settings.companyProfitMarginPct) && settings.companyProfitMarginPct > 0
+      ? settings.companyProfitMarginPct
+      : 0;
+  const profitFactor = 1 + profitPct / 100;
+  return requestPrice * profitFactor;
 }
 
