@@ -18,6 +18,7 @@ export type CarrierRow = {
   email: string;
   name: string | null;
   createdAt: string;
+  trustedAt: string | null;
   fullName: string | null;
   phone: string | null;
   carPlate: string | null;
@@ -41,7 +42,13 @@ export type ShipmentCompanyDirectoryRow = {
   truck_types: string | null;
   destinations: string | null;
   createdAt: string;
+  trustedAt: string | null;
 };
+
+/** Unified admin “trusted list” row (platform DRIVER vs directory ShipmentCompany). */
+export type TrustedListRow =
+  | { kind: "platform"; row: CarrierRow }
+  | { kind: "directory"; row: ShipmentCompanyDirectoryRow };
 
 /** Display fields aligned with {@link ShipmentCompanyDirectoryRow} for platform carriers. */
 export function carrierRowCompanyName(row: CarrierRow): string {

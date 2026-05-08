@@ -14,18 +14,24 @@ import {
   type CarrierRow,
   type CompanyRow,
   type ShipmentCompanyDirectoryRow,
+  type TrustedListRow,
 } from "@/lib/admin-clients-types";
 
-export type { CarrierRow, CompanyRow, ShipmentCompanyDirectoryRow } from "@/lib/admin-clients-types";
+export type { CarrierRow, CompanyRow, ShipmentCompanyDirectoryRow, TrustedListRow } from "@/lib/admin-clients-types";
 
 const da = "dashboard.admin";
 
-/** Equal columns + fixed layout keeps header/body aligned in RTL (avoid dir=ltr on &lt;td&gt;). */
+/** Tighter data columns + wider actions so the 2×2 action grid fits without awkward wraps. */
 const COLGROUP_8 = (
   <colgroup>
-    {Array.from({ length: 8 }, (_, i) => (
-      <col key={i} style={{ width: `${100 / 8}%` }} />
-    ))}
+    <col style={{ width: "13%" }} />
+    <col style={{ width: "13%" }} />
+    <col style={{ width: "13%" }} />
+    <col style={{ width: "11%" }} />
+    <col style={{ width: "11%" }} />
+    <col style={{ width: "11%" }} />
+    <col style={{ width: "10%" }} />
+    <col style={{ width: "18%" }} />
   </colgroup>
 );
 
@@ -80,6 +86,7 @@ function includesQuery(query: string, parts: Array<string | null | undefined>) {
 function clientsUrl(pages: {
   coPage: number;
   drPage: number;
+  trPage: number;
   dcPage: number;
   bcoPage: number;
   bdrPage: number;
@@ -88,6 +95,7 @@ function clientsUrl(pages: {
   const sp = new URLSearchParams();
   if (pages.coPage > 1) sp.set("coPage", String(pages.coPage));
   if (pages.drPage > 1) sp.set("drPage", String(pages.drPage));
+  if (pages.trPage > 1) sp.set("trPage", String(pages.trPage));
   if (pages.dcPage > 1) sp.set("dcPage", String(pages.dcPage));
   if (pages.bcoPage > 1) sp.set("bcoPage", String(pages.bcoPage));
   if (pages.bdrPage > 1) sp.set("bdrPage", String(pages.bdrPage));
@@ -168,6 +176,7 @@ function TablePagination({
 export function AdminClientsTabs({
   companies,
   registeredCarriers,
+  trustedListRows,
   directoryCarriers,
   blacklistedCompanies,
   blacklistedCarriers,
@@ -178,6 +187,9 @@ export function AdminClientsTabs({
   driverPage,
   driverTotal,
   driverTotalPages,
+  trustedPage,
+  trustedTotal,
+  trustedTotalPages,
   directoryPage,
   directoryTotal,
   directoryTotalPages,
@@ -195,6 +207,7 @@ export function AdminClientsTabs({
 }: {
   companies: CompanyRow[];
   registeredCarriers: CarrierRow[];
+  trustedListRows: TrustedListRow[];
   directoryCarriers: ShipmentCompanyDirectoryRow[];
   blacklistedCompanies: CompanyRow[];
   blacklistedCarriers: CarrierRow[];
@@ -205,6 +218,9 @@ export function AdminClientsTabs({
   driverPage: number;
   driverTotal: number;
   driverTotalPages: number;
+  trustedPage: number;
+  trustedTotal: number;
+  trustedTotalPages: number;
   directoryPage: number;
   directoryTotal: number;
   directoryTotalPages: number;
@@ -222,7 +238,7 @@ export function AdminClientsTabs({
 }) {
   const { t, locale } = useI18n();
   const [tab, setTab] = useState<
-    "companies" | "carriers" | "blacklistedCompanies" | "blacklistedCarriers"
+    "companies" | "carriers" | "trustedCarriers" | "blacklistedCompanies" | "blacklistedCarriers"
   >("companies");
   const [queryRaw, setQueryRaw] = useState("");
 
@@ -334,9 +350,41 @@ export function AdminClientsTabs({
     [blacklistedDirectoryCarriers, query]
   );
 
+  const filteredTrustedList = useMemo(
+    () =>
+      trustedListRows.filter((item) => {
+        if (item.kind === "platform") {
+          const row = item.row;
+          return includesQuery(query, [
+            carrierRowCompanyName(row),
+            carrierRowRepresentative(row),
+            row.email,
+            row.phone,
+            carrierRowTruckTypes(row),
+            carrierRowDestinations(row),
+            row.carPlate,
+            row.carType,
+            row.licenseNumber,
+            row.nationalId,
+          ]);
+        }
+        const row = item.row;
+        return includesQuery(query, [
+          row.company_name,
+          row.representative_name,
+          row.email,
+          row.phone,
+          row.truck_types,
+          row.destinations,
+        ]);
+      }),
+    [trustedListRows, query]
+  );
+
   const pages = {
     coPage: companyPage,
     drPage: driverPage,
+    trPage: trustedPage,
     dcPage: directoryPage,
     bcoPage: blacklistedCompanyPage,
     bdrPage: blacklistedDriverPage,
@@ -367,6 +415,17 @@ export function AdminClientsTabs({
           }`}
         >
           {t(`${da}.clientsTabCarriers`)} ({carriersTabCount})
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("trustedCarriers")}
+          className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+            tab === "trustedCarriers"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {t(`${da}.clientsTabTrustedCarriers`)} ({trustedTotal})
         </button>
         <button
           type="button"
@@ -576,6 +635,188 @@ export function AdminClientsTabs({
               prevHref={clientsUrl({ ...pages, bcoPage: blacklistedCompanyPage - 1 })}
               nextHref={clientsUrl({ ...pages, bcoPage: blacklistedCompanyPage + 1 })}
               ariaLabel={t(`${da}.clientsBlacklistedCompaniesPaginationAria`)}
+              t={t}
+            />
+          </div>
+        )
+      ) : tab === "trustedCarriers" ? (
+        trustedTotal === 0 ? (
+          <p className="text-muted-foreground py-6">{t(`${da}.clientsEmptyTrustedCarriers`)}</p>
+        ) : filteredTrustedList.length === 0 ? (
+          <p className="text-muted-foreground py-6">{t(`${da}.noSearchResults`)}</p>
+        ) : (
+          <div className="space-y-3">
+            <div className="md:hidden space-y-3">
+              {filteredTrustedList.map((item) =>
+                item.kind === "platform" ? (
+                  <article
+                    key={`platform-${item.row.id}`}
+                    className="rounded-xl border border-border bg-card/50 p-4 shadow-sm"
+                  >
+                    <div className="space-y-3">
+                      <MobileCardField label={t(`${da}.clientsColCompanyName`)}>
+                        <span className="inline-flex flex-wrap items-center gap-2">
+                          <span className="min-w-0 break-words">{carrierRowCompanyName(item.row)}</span>
+                          <span className="shrink-0 rounded-md border border-border bg-muted/50 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                            {t(`${da}.shipmentActionsPlatformCarrierBadge`)}
+                          </span>
+                        </span>
+                      </MobileCardField>
+                      <MobileCardField label={t(`${da}.clientsColContact`)}>
+                        {carrierRowRepresentative(item.row)}
+                      </MobileCardField>
+                      <MobileCardField label={t(`${da}.clientsColEmail`)} mono>
+                        <span className="break-all">{item.row.email}</span>
+                      </MobileCardField>
+                      <MobileCardField label={t(`${da}.clientsColPhone`)} mono>
+                        {item.row.phone ?? "—"}
+                      </MobileCardField>
+                      <MobileCardField label={t(`${da}.clientsColTruckTypes`)}>
+                        <span className="text-muted-foreground">{carrierRowTruckTypes(item.row)}</span>
+                      </MobileCardField>
+                      <MobileCardField label={t(`${da}.clientsColDestinations`)}>
+                        <span className="text-muted-foreground">{carrierRowDestinations(item.row)}</span>
+                      </MobileCardField>
+                      <MobileCardField label={t(`${da}.clientsColRegistered`)}>
+                        <span className="text-muted-foreground">{dateLabel(item.row.createdAt)}</span>
+                      </MobileCardField>
+                    </div>
+                    <DriverUserActions
+                      row={item.row}
+                      currentUserId={currentUserId}
+                      listVariant="active"
+                      uiVariant="card"
+                    />
+                  </article>
+                ) : (
+                  <article
+                    key={`directory-${item.row.id}`}
+                    className="rounded-xl border border-border bg-card/50 p-4 shadow-sm"
+                  >
+                    <div className="space-y-3">
+                      <MobileCardField label={t(`${da}.clientsColCompanyName`)}>
+                        <span className="inline-flex flex-wrap items-center gap-2">
+                          <span className="min-w-0 break-words">{item.row.company_name ?? "—"}</span>
+                          <span className="shrink-0 rounded-md border border-border bg-muted/50 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                            {t(`${da}.shipmentActionsDirectoryCarrierBadge`)}
+                          </span>
+                        </span>
+                      </MobileCardField>
+                      <MobileCardField label={t(`${da}.clientsColContact`)}>
+                        {item.row.representative_name ?? "—"}
+                      </MobileCardField>
+                      <MobileCardField label={t(`${da}.clientsColEmail`)} mono>
+                        <span className="break-all">{item.row.email ?? "—"}</span>
+                      </MobileCardField>
+                      <MobileCardField label={t(`${da}.clientsColPhone`)} mono>
+                        {item.row.phone ?? "—"}
+                      </MobileCardField>
+                      <MobileCardField label={t(`${da}.clientsColTruckTypes`)}>
+                        <span className="text-muted-foreground">{item.row.truck_types ?? "—"}</span>
+                      </MobileCardField>
+                      <MobileCardField label={t(`${da}.clientsColDestinations`)}>
+                        <span className="text-muted-foreground">{item.row.destinations ?? "—"}</span>
+                      </MobileCardField>
+                      <MobileCardField label={t(`${da}.clientsColRegistered`)}>
+                        <span className="text-muted-foreground">{dateLabel(item.row.createdAt)}</span>
+                      </MobileCardField>
+                    </div>
+                    <DirectoryCarrierActions row={item.row} listVariant="active" uiVariant="card" />
+                  </article>
+                ),
+              )}
+            </div>
+            <div className="hidden md:block rounded-xl border border-border overflow-x-auto">
+              <table className="w-full min-w-[860px] table-fixed border-collapse text-sm">
+                {COLGROUP_8}
+                <thead>
+                  <tr className="border-b border-border bg-muted/40">
+                    <th className="p-3 text-start font-semibold align-bottom break-words">{t(`${da}.clientsColCompanyName`)}</th>
+                    <th className="p-3 text-start font-semibold align-bottom break-words">{t(`${da}.clientsColContact`)}</th>
+                    <th className="p-3 text-start font-semibold align-bottom break-words">{t(`${da}.clientsColEmail`)}</th>
+                    <th className="p-3 text-start font-semibold align-bottom break-words">{t(`${da}.clientsColPhone`)}</th>
+                    <th className="p-3 text-start font-semibold align-bottom break-words">{t(`${da}.clientsColTruckTypes`)}</th>
+                    <th className="p-3 text-start font-semibold align-bottom break-words">{t(`${da}.clientsColDestinations`)}</th>
+                    <th className="p-3 text-start font-semibold align-bottom break-words">{t(`${da}.clientsColRegistered`)}</th>
+                    <th className="p-3 text-start font-semibold align-bottom break-words">{t(`${da}.tableColActions`)}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredTrustedList.map((item) =>
+                    item.kind === "platform" ? (
+                      <tr key={`platform-${item.row.id}`} className="border-b border-border/80 last:border-0">
+                        <td className="p-3 align-top text-start break-words min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="min-w-0 break-words">{carrierRowCompanyName(item.row)}</span>
+                            <span className="shrink-0 rounded-md border border-border bg-muted/50 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              {t(`${da}.shipmentActionsPlatformCarrierBadge`)}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="p-3 align-top text-start break-words min-w-0">{carrierRowRepresentative(item.row)}</td>
+                        <td className="p-3 align-top text-right break-words min-w-0">
+                          <LtrCell>{item.row.email}</LtrCell>
+                        </td>
+                        <td className="p-3 align-top text-right break-words min-w-0">
+                          <LtrCell>{item.row.phone ?? "—"}</LtrCell>
+                        </td>
+                        <td className="p-3 align-top text-start break-words min-w-0 text-muted-foreground">
+                          {carrierRowTruckTypes(item.row)}
+                        </td>
+                        <td className="p-3 align-top text-start break-words min-w-0 text-muted-foreground">
+                          {carrierRowDestinations(item.row)}
+                        </td>
+                        <td className="p-3 align-top text-start break-words min-w-0 text-muted-foreground">
+                          {dateLabel(item.row.createdAt)}
+                        </td>
+                        <DriverUserActions
+                          row={item.row}
+                          currentUserId={currentUserId}
+                          listVariant="active"
+                          uiVariant="table"
+                        />
+                      </tr>
+                    ) : (
+                      <tr key={`directory-${item.row.id}`} className="border-b border-border/80 last:border-0">
+                        <td className="p-3 align-top text-start break-words min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="min-w-0 break-words">{item.row.company_name ?? "—"}</span>
+                            <span className="shrink-0 rounded-md border border-border bg-muted/50 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              {t(`${da}.shipmentActionsDirectoryCarrierBadge`)}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="p-3 align-top text-start break-words min-w-0">{item.row.representative_name ?? "—"}</td>
+                        <td className="p-3 align-top text-right break-words min-w-0">
+                          <LtrCell>{item.row.email ?? "—"}</LtrCell>
+                        </td>
+                        <td className="p-3 align-top text-right break-words min-w-0">
+                          <LtrCell>{item.row.phone ?? "—"}</LtrCell>
+                        </td>
+                        <td className="p-3 align-top text-start break-words min-w-0 text-muted-foreground">
+                          {item.row.truck_types ?? "—"}
+                        </td>
+                        <td className="p-3 align-top text-start break-words min-w-0 text-muted-foreground">
+                          {item.row.destinations ?? "—"}
+                        </td>
+                        <td className="p-3 align-top text-start break-words min-w-0 text-muted-foreground">
+                          {dateLabel(item.row.createdAt)}
+                        </td>
+                        <DirectoryCarrierActions row={item.row} listVariant="active" uiVariant="table" />
+                      </tr>
+                    ),
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <TablePagination
+              page={trustedPage}
+              totalPages={trustedTotalPages}
+              total={trustedTotal}
+              pageSize={pageSize}
+              prevHref={clientsUrl({ ...pages, trPage: trustedPage - 1 })}
+              nextHref={clientsUrl({ ...pages, trPage: trustedPage + 1 })}
+              ariaLabel={t(`${da}.clientsTrustedPaginationAria`)}
               t={t}
             />
           </div>

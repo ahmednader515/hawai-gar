@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db";
 
 const KEY_COMPANY_NAME = "shipment_invoice_company_name";
 const KEY_LOGO_URL = "shipment_invoice_logo_url";
+const KEY_TITLE_AR = "shipment_invoice_title_ar";
+const KEY_TITLE_EN = "shipment_invoice_title_en";
 const KEY_NOTES_AR = "shipment_invoice_notes_ar";
 const KEY_NOTES_EN = "shipment_invoice_notes_en";
 const KEY_BANK_ACCOUNTS = "shipment_invoice_bank_accounts_json_v1";
@@ -18,6 +20,8 @@ export type InvoiceBankAccount = {
 export type ShipmentInvoiceSettings = {
   companyName: string;
   logoUrl: string;
+  titleAr: string;
+  titleEn: string;
   notesAr: string;
   notesEn: string;
   bankAccounts: InvoiceBankAccount[];
@@ -26,6 +30,8 @@ export type ShipmentInvoiceSettings = {
 const DEFAULT_SETTINGS: ShipmentInvoiceSettings = {
   companyName: "Hawai Logisti",
   logoUrl: "/logo.png",
+  titleAr: "ايصال الدفع",
+  titleEn: "Payment receipt",
   notesAr:
     "يرجى تحويل المبلغ إلى أحد الحسابات البنكية التالية، ثم تأكيد الدفع عبر زر «لقد دفعت» مع رفع إثبات السداد.",
   notesEn:
@@ -73,9 +79,11 @@ function parseBankAccounts(raw: string | null | undefined): InvoiceBankAccount[]
 
 export async function getShipmentInvoiceSettings(): Promise<ShipmentInvoiceSettings> {
   try {
-    const [companyNameRow, logoUrlRow, notesArRow, notesEnRow, accountsRow] = await Promise.all([
+    const [companyNameRow, logoUrlRow, titleArRow, titleEnRow, notesArRow, notesEnRow, accountsRow] = await Promise.all([
       prisma.siteSetting.findUnique({ where: { key: KEY_COMPANY_NAME } }),
       prisma.siteSetting.findUnique({ where: { key: KEY_LOGO_URL } }),
+      prisma.siteSetting.findUnique({ where: { key: KEY_TITLE_AR } }),
+      prisma.siteSetting.findUnique({ where: { key: KEY_TITLE_EN } }),
       prisma.siteSetting.findUnique({ where: { key: KEY_NOTES_AR } }),
       prisma.siteSetting.findUnique({ where: { key: KEY_NOTES_EN } }),
       prisma.siteSetting.findUnique({ where: { key: KEY_BANK_ACCOUNTS } }),
@@ -83,6 +91,8 @@ export async function getShipmentInvoiceSettings(): Promise<ShipmentInvoiceSetti
     return {
       companyName: companyNameRow?.value?.trim() || DEFAULT_SETTINGS.companyName,
       logoUrl: logoUrlRow?.value?.trim() || DEFAULT_SETTINGS.logoUrl,
+      titleAr: titleArRow?.value?.trim() || DEFAULT_SETTINGS.titleAr,
+      titleEn: titleEnRow?.value?.trim() || DEFAULT_SETTINGS.titleEn,
       notesAr: notesArRow?.value?.trim() || DEFAULT_SETTINGS.notesAr,
       notesEn: notesEnRow?.value?.trim() || DEFAULT_SETTINGS.notesEn,
       bankAccounts: parseBankAccounts(accountsRow?.value),
@@ -105,6 +115,20 @@ export async function setShipmentInvoiceSettings(data: Partial<ShipmentInvoiceSe
       where: { key: KEY_LOGO_URL },
       create: { key: KEY_LOGO_URL, value: data.logoUrl.trim() },
       update: { value: data.logoUrl.trim() },
+    });
+  }
+  if (data.titleAr !== undefined) {
+    await prisma.siteSetting.upsert({
+      where: { key: KEY_TITLE_AR },
+      create: { key: KEY_TITLE_AR, value: data.titleAr.trim() },
+      update: { value: data.titleAr.trim() },
+    });
+  }
+  if (data.titleEn !== undefined) {
+    await prisma.siteSetting.upsert({
+      where: { key: KEY_TITLE_EN },
+      create: { key: KEY_TITLE_EN, value: data.titleEn.trim() },
+      update: { value: data.titleEn.trim() },
     });
   }
   if (data.notesAr !== undefined) {

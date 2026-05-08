@@ -41,12 +41,12 @@ export default async function ShipmentInvoicePage({
             invoice={invoice}
             locale={lang}
             labels={{
-              title: t("hero.invoiceCardTitle"),
-              invoiceNumber: t("hero.invoiceNumberLabel"),
+              title: lang === "ar" ? invoice.settings.titleAr : invoice.settings.titleEn,
+              invoiceNumber: lang === "ar" ? t("hero.invoiceNumberLabel").replaceAll("فاتورة", "ايصال") : t("hero.invoiceNumberLabel"),
               issuedAt: t("hero.invoiceIssuedAtLabel"),
               amount: t("hero.invoiceAmountLabel"),
               route: t("hero.route"),
-              requestDetails: t("hero.invoiceRequestDetailsTitle"),
+              requestDetails: lang === "ar" ? t("hero.invoiceRequestDetailsTitle").replaceAll("فاتورة", "ايصال") : t("hero.invoiceRequestDetailsTitle"),
               shipmentType: t("hero.shipmentType"),
               containerSize: t("hero.containerSize"),
               containersCount: t("hero.containersCount"),

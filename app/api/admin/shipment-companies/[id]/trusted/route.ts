@@ -10,19 +10,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const { id } = await params;
   const body = await req.json().catch(() => null);
-  const blacklisted = Boolean(body && typeof body === "object" && (body as { blacklisted?: unknown }).blacklisted === true);
+  const trusted = Boolean(body && typeof body === "object" && (body as { trusted?: unknown }).trusted === true);
 
   const existing = await prisma.shipmentCompany.findUnique({ where: { id } });
   if (!existing) {
     return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
   }
 
+  if (existing.blacklistedAt) {
+    return NextResponse.json({ error: "BLACKLISTED_DIRECTORY" }, { status: 400 });
+  }
+
   await prisma.shipmentCompany.update({
     where: { id },
-    data: {
-      blacklistedAt: blacklisted ? new Date() : null,
-      ...(blacklisted ? { trustedAt: null } : {}),
-    },
+    data: { trustedAt: trusted ? new Date() : null },
   });
 
   return NextResponse.json({ ok: true });

@@ -36,6 +36,8 @@ model User {
   role          UserRole
   /// Set when admin blacklists the account; excluded from active client lists.
   blacklistedAt DateTime?
+  /// Set when admin marks a DRIVER account as trusted for assignment prioritization.
+  trustedAt     DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -48,6 +50,7 @@ model User {
 
   @@index([role])
   @@index([blacklistedAt])
+  @@index([trustedAt])
 }
 
 model Account {
@@ -266,6 +269,8 @@ model ShipmentCompany {
   destinations        String?
   /// Set when admin blacklists this directory entry; excluded from active directory lists.
   blacklistedAt       DateTime?
+  /// Set when admin marks this directory entry as trusted for assignment prioritization.
+  trustedAt           DateTime?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   requests            ShipmentRequest[]
@@ -274,6 +279,7 @@ model ShipmentCompany {
   @@index([email])
   @@index([phone])
   @@index([blacklistedAt])
+  @@index([trustedAt])
   @@map("shipment_companies")
 }
 

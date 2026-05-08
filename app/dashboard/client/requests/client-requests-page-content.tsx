@@ -243,9 +243,16 @@ export function ClientRequestsPageContent({
             {filteredShipments.map((r) => {
               const detailsHref = `/dashboard/client/shipment-requests/${r.id}`;
               const detailsBtnClass =
-                "inline-flex w-full min-h-[48px] items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-md transition hover:bg-primary/90";
+                "inline-flex w-full min-h-[48px] items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-md transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70 focus-visible:ring-offset-2";
               return (
-              <Card key={r.id} className="min-w-0 overflow-hidden border border-border shadow-sm max-md:rounded-2xl">
+              <Card
+                key={r.id}
+                className="relative min-w-0 overflow-hidden border-2 border-emerald-500/70 shadow-sm transition-shadow hover:shadow-md max-md:rounded-2xl"
+              >
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 rounded-[inherit] ring-2 ring-emerald-400/30 blur-[1px] animate-pulse"
+                />
                 <CardHeader className="space-y-3 pb-3 max-md:px-3 max-md:pt-3">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0 space-y-2 w-full">
@@ -260,7 +267,7 @@ export function ClientRequestsPageContent({
                         {new Date(r.createdAt).toLocaleString(dateLocale)}
                       </span>
                       <Link href={detailsHref} className={`${detailsBtnClass} sm:w-auto`}>
-                        {t("dashboard.admin.viewDetails")}
+                        {t("dashboard.client.clickHereForDetails")}
                       </Link>
                     </div>
                     <div className="sm:hidden text-xs text-muted-foreground">
@@ -362,7 +369,7 @@ export function ClientRequestsPageContent({
                   />
                   <div className="border-t border-border pt-4 sm:hidden">
                     <Link href={detailsHref} className={detailsBtnClass}>
-                      {t("dashboard.admin.viewDetails")}
+                      {t("dashboard.client.clickHereForDetails")}
                     </Link>
                   </div>
                 </CardContent>

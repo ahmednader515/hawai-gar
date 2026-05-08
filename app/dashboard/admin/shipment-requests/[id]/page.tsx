@@ -23,6 +23,12 @@ import {
   getCompatibleShipmentCompanies,
 } from "@/lib/shipment-company-compatibility";
 import { computeShipmentEstimateSar, getShipmentPricingSettings } from "@/lib/shipment-pricing";
+import { parseTagList } from "@/lib/catalog-tags";
+
+function formatCatalogDisplay(raw: string | null | undefined): string | null {
+  const tags = parseTagList(raw);
+  return tags.length ? tags.join("، ") : null;
+}
 
 function statusBadgeClass(status: string): string {
   switch (status) {
@@ -138,7 +144,18 @@ export default async function AdminShipmentRequestDetailsPage({
             id: true,
             email: true,
             driverProfile: {
-              select: { fullName: true, phone: true, carPlate: true },
+              select: {
+                fullName: true,
+                phone: true,
+                carPlate: true,
+                carType: true,
+                carCapacity: true,
+                licenseNumber: true,
+                listingCompanyName: true,
+                representativeName: true,
+                truckTypesCatalog: true,
+                serviceDestinations: true,
+              },
             },
           },
         })
@@ -152,6 +169,8 @@ export default async function AdminShipmentRequestDetailsPage({
             representative_name: true,
             phone: true,
             email: true,
+            truck_types: true,
+            destinations: true,
           },
         })
       : Promise.resolve([]),
@@ -230,6 +249,7 @@ export default async function AdminShipmentRequestDetailsPage({
         email: true,
         truck_types: true,
         destinations: true,
+        trustedAt: true,
       },
     }),
     prisma.user.findMany({
@@ -268,11 +288,18 @@ export default async function AdminShipmentRequestDetailsPage({
     requestCompatInput,
     shipmentCompanies,
   ).slice(0, 40);
+  const trustedDriverIds = new Set(
+    platformDriverUsers.filter((u) => u.trustedAt != null).map((u) => u.id),
+  );
+  const trustedDirectoryIds = new Set(
+    shipmentCompanies.filter((c) => c.trustedAt != null).map((c) => c.id),
+  );
 
   const compatibleAssignees = [
     ...compatiblePlatformDrivers.map((item) => ({
       source: "platformDriver" as const,
       id: item.company.id,
+      isTrusted: trustedDriverIds.has(item.company.id),
       company_name: item.company.company_name,
       representative_name: item.company.representative_name,
       phone: item.company.phone,
@@ -284,6 +311,7 @@ export default async function AdminShipmentRequestDetailsPage({
     ...compatibleDirectoryCompanies.map((item) => ({
       source: "directoryCompany" as const,
       id: item.company.id,
+      isTrusted: trustedDirectoryIds.has(item.company.id),
       company_name: item.company.company_name,
       representative_name: item.company.representative_name,
       phone: item.company.phone,
@@ -589,7 +617,10 @@ export default async function AdminShipmentRequestDetailsPage({
                     )}
                     {companyUser.email && (
                       <p className="break-all text-muted-foreground">
-                        {t(`${da}.shipmentDetailCompanyEmail`)}: {companyUser.email}
+                        {t(`${da}.shipmentDetailCompanyEmail`)}:{" "}
+                        <span dir="ltr" className="break-all">
+                          {companyUser.email}
+                        </span>
                       </p>
                     )}
                   </>
@@ -626,14 +657,59 @@ export default async function AdminShipmentRequestDetailsPage({
                                 </span>
                               </div>
                               <p className="mt-2 font-semibold text-foreground">
-                                {entry.user.driverProfile.fullName}
+                                {entry.user.driverProfile.listingCompanyName?.trim() ||
+                                  entry.user.driverProfile.fullName}
                               </p>
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                {t(`${da}.shipmentDetailCarrierPhone`)}: {entry.user.driverProfile.phone}
+                              <p className="mt-1 text-muted-foreground">
+                                {t(`${da}.shipmentDetailCompanyContact`)}:{" "}
+                                {entry.user.driverProfile.representativeName?.trim() ||
+                                  entry.user.driverProfile.fullName}
+                              </p>
+                              <p className="mt-1 flex items-center gap-2 text-muted-foreground">
+                                <Phone className="size-3.5 shrink-0 opacity-70" aria-hidden />
+                                <span dir="ltr">{entry.user.driverProfile.phone}</span>
                               </p>
                               {entry.user.email ? (
-                                <p className="mt-0.5 break-all text-xs text-muted-foreground" dir="ltr">
-                                  {entry.user.email}
+                                <p className="mt-1 break-all text-muted-foreground">
+                                  {t(`${da}.shipmentDetailCarrierEmail`)}:{" "}
+                                  <span dir="ltr" className="break-all">
+                                    {entry.user.email}
+                                  </span>
+                                </p>
+                              ) : null}
+                              {formatCatalogDisplay(entry.user.driverProfile.truckTypesCatalog) ? (
+                                <p className="mt-1 text-muted-foreground">
+                                  {t(`${da}.clientsColTruckTypes`)}:{" "}
+                                  {formatCatalogDisplay(entry.user.driverProfile.truckTypesCatalog)}
+                                </p>
+                              ) : null}
+                              {formatCatalogDisplay(entry.user.driverProfile.serviceDestinations) ? (
+                                <p className="mt-1 text-muted-foreground">
+                                  {t(`${da}.clientsColDestinations`)}:{" "}
+                                  {formatCatalogDisplay(entry.user.driverProfile.serviceDestinations)}
+                                </p>
+                              ) : null}
+                              {entry.user.driverProfile.carPlate ? (
+                                <p className="mt-1 text-muted-foreground">
+                                  {t(`${da}.shipmentDetailCarrierPlate`)}:{" "}
+                                  <span dir="ltr">{entry.user.driverProfile.carPlate}</span>
+                                </p>
+                              ) : null}
+                              {entry.user.driverProfile.carType ? (
+                                <p className="mt-1 text-muted-foreground">
+                                  {t(`${da}.shipmentDetailCarrierVehicleType`)}:{" "}
+                                  {entry.user.driverProfile.carType}
+                                </p>
+                              ) : null}
+                              {entry.user.driverProfile.carCapacity ? (
+                                <p className="mt-1 text-muted-foreground">
+                                  {t(`${da}.clientsColCapacity`)}: {entry.user.driverProfile.carCapacity}
+                                </p>
+                              ) : null}
+                              {entry.user.driverProfile.licenseNumber ? (
+                                <p className="mt-1 text-muted-foreground">
+                                  {t(`${da}.shipmentDetailCarrierLicense`)}:{" "}
+                                  <span dir="ltr">{entry.user.driverProfile.licenseNumber}</span>
                                 </p>
                               ) : null}
                             </>
@@ -648,23 +724,37 @@ export default async function AdminShipmentRequestDetailsPage({
                                 {entry.company.company_name ?? "—"}
                               </p>
                               {entry.company.representative_name ? (
-                                <p className="mt-1 text-xs text-muted-foreground">
+                                <p className="mt-1 text-muted-foreground">
+                                  {t(`${da}.shipmentDetailCompanyContact`)}:{" "}
                                   {entry.company.representative_name}
                                 </p>
                               ) : null}
-                              {(entry.company.phone || entry.company.email) && (
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                  {entry.company.phone ? (
-                                    <span dir="ltr">{entry.company.phone}</span>
-                                  ) : null}
-                                  {entry.company.phone && entry.company.email ? " · " : null}
-                                  {entry.company.email ? (
-                                    <span dir="ltr" className="break-all">
-                                      {entry.company.email}
-                                    </span>
-                                  ) : null}
+                              {entry.company.phone ? (
+                                <p className="mt-1 flex items-center gap-2 text-muted-foreground">
+                                  <Phone className="size-3.5 shrink-0 opacity-70" aria-hidden />
+                                  <span dir="ltr">{entry.company.phone}</span>
                                 </p>
-                              )}
+                              ) : null}
+                              {entry.company.email ? (
+                                <p className="mt-1 break-all text-muted-foreground">
+                                  {t(`${da}.shipmentDetailCarrierEmail`)}:{" "}
+                                  <span dir="ltr" className="break-all">
+                                    {entry.company.email}
+                                  </span>
+                                </p>
+                              ) : null}
+                              {formatCatalogDisplay(entry.company.truck_types) ? (
+                                <p className="mt-1 text-muted-foreground">
+                                  {t(`${da}.clientsColTruckTypes`)}:{" "}
+                                  {formatCatalogDisplay(entry.company.truck_types)}
+                                </p>
+                              ) : null}
+                              {formatCatalogDisplay(entry.company.destinations) ? (
+                                <p className="mt-1 text-muted-foreground">
+                                  {t(`${da}.clientsColDestinations`)}:{" "}
+                                  {formatCatalogDisplay(entry.company.destinations)}
+                                </p>
+                              ) : null}
                             </>
                           ) : (
                             <p className="text-xs text-muted-foreground">
@@ -704,7 +794,10 @@ export default async function AdminShipmentRequestDetailsPage({
                     )}
                     {assignedShipmentCompany.email && (
                       <p className="break-all text-muted-foreground">
-                        {t(`${da}.shipmentDetailCarrierEmail`)}: {assignedShipmentCompany.email}
+                        {t(`${da}.shipmentDetailCarrierEmail`)}:{" "}
+                        <span dir="ltr" className="break-all">
+                          {assignedShipmentCompany.email}
+                        </span>
                       </p>
                     )}
                     {assignedShipmentCompany.truck_types && (
@@ -742,7 +835,10 @@ export default async function AdminShipmentRequestDetailsPage({
                     )}
                     {carrierUser.email && (
                       <p className="break-all text-muted-foreground">
-                        {t(`${da}.shipmentDetailCarrierEmail`)}: {carrierUser.email}
+                        {t(`${da}.shipmentDetailCarrierEmail`)}:{" "}
+                        <span dir="ltr" className="break-all">
+                          {carrierUser.email}
+                        </span>
                       </p>
                     )}
                   </>

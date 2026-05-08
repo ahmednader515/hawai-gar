@@ -335,48 +335,54 @@ export function CompanyUserActions({
   const canBlacklist = row.id !== currentUserId;
 
   const actionButtons = (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => setEditOpen(true)}>
-        <Pencil className="size-3.5" aria-hidden />
-        {t(`${da}.tableEdit`)}
+    <div className="grid w-full min-w-[11rem] grid-cols-2 gap-1.5">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="min-w-0 gap-1 justify-center"
+        onClick={() => setEditOpen(true)}
+      >
+        <Pencil className="size-3.5 shrink-0" aria-hidden />
+        <span className="truncate">{t(`${da}.tableEdit`)}</span>
       </Button>
       {listVariant === "active" ? (
         <Button
           type="button"
           variant="secondary"
           size="sm"
-          className="gap-1"
+          className="min-w-0 gap-1 justify-center"
           disabled={!canBlacklist || blacklistPending}
           onClick={() => setBlacklistOpen(true)}
           aria-label={t(`${da}.clientsBlacklistAria`)}
         >
-          <Ban className="size-3.5" aria-hidden />
-          {t(`${da}.clientsBlacklist`)}
+          <Ban className="size-3.5 shrink-0" aria-hidden />
+          <span className="truncate">{t(`${da}.clientsBlacklist`)}</span>
         </Button>
       ) : (
         <Button
           type="button"
           variant="secondary"
           size="sm"
-          className="gap-1"
+          className="min-w-0 gap-1 justify-center"
           disabled={blacklistPending}
           onClick={() => setUnblacklistOpen(true)}
           aria-label={t(`${da}.clientsUnblacklistAria`)}
         >
-          <ShieldCheck className="size-3.5" aria-hidden />
-          {t(`${da}.clientsUnblacklist`)}
+          <ShieldCheck className="size-3.5 shrink-0" aria-hidden />
+          <span className="truncate">{t(`${da}.clientsUnblacklist`)}</span>
         </Button>
       )}
       <Button
         type="button"
         variant="destructive"
         size="sm"
-        className="gap-1"
+        className="col-span-2 min-w-0 gap-1 justify-center"
         disabled={!canDelete || deleting}
         onClick={() => setDeleteOpen(true)}
       >
-        <Trash2 className="size-3.5" aria-hidden />
-        {deleting ? t(`${da}.tableDeleting`) : t(`${da}.tableDelete`)}
+        <Trash2 className="size-3.5 shrink-0" aria-hidden />
+        <span className="truncate">{deleting ? t(`${da}.tableDeleting`) : t(`${da}.tableDelete`)}</span>
       </Button>
     </div>
   );
@@ -384,7 +390,7 @@ export function CompanyUserActions({
   return (
     <>
       {uiVariant === "table" ? (
-        <td className="p-3 align-top text-start whitespace-nowrap">{actionButtons}</td>
+        <td className="p-3 align-top text-start">{actionButtons}</td>
       ) : (
         <div className="mt-3 border-t border-border/80 pt-3">{actionButtons}</div>
       )}
@@ -527,10 +533,13 @@ export function DriverUserActions({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [blacklistOpen, setBlacklistOpen] = useState(false);
   const [unblacklistOpen, setUnblacklistOpen] = useState(false);
+  const [trustOpen, setTrustOpen] = useState(false);
+  const [untrustOpen, setUntrustOpen] = useState(false);
   const [errorAlert, setErrorAlert] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [blacklistPending, setBlacklistPending] = useState(false);
+  const [trustPending, setTrustPending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const [email, setEmail] = useState(row.email);
@@ -549,6 +558,33 @@ export function DriverUserActions({
     initialDestinationTagsFromCarrier(row),
   );
   const [newPassword, setNewPassword] = useState("");
+  const isTrusted = Boolean(row.trustedAt);
+
+  async function performSetTrusted(trusted: boolean) {
+    setTrustPending(true);
+    try {
+      const res = await fetch(`/api/admin/users/${row.id}/trusted`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trusted }),
+      });
+      if (!res.ok) {
+        setTrustOpen(false);
+        setUntrustOpen(false);
+        setErrorAlert(t(`${da}.clientsErrorGeneric`));
+        return;
+      }
+      setTrustOpen(false);
+      setUntrustOpen(false);
+      router.refresh();
+    } catch {
+      setTrustOpen(false);
+      setUntrustOpen(false);
+      setErrorAlert(t(`${da}.clientsErrorGeneric`));
+    } finally {
+      setTrustPending(false);
+    }
+  }
 
   const resetForm = useCallback(() => {
     setEmail(row.email);
@@ -657,60 +693,143 @@ export function DriverUserActions({
   const canDelete = row.id !== currentUserId;
   const canBlacklist = row.id !== currentUserId;
 
-  const actionButtons = (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => setEditOpen(true)}>
-        <Pencil className="size-3.5" aria-hidden />
-        {t(`${da}.tableEdit`)}
-      </Button>
-      {listVariant === "active" ? (
+  const actionButtons =
+    listVariant === "active" ? (
+      <div className="grid w-full min-w-[11rem] grid-cols-2 gap-1.5">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="min-w-0 gap-1 justify-center"
+          onClick={() => setEditOpen(true)}
+        >
+          <Pencil className="size-3.5 shrink-0" aria-hidden />
+          <span className="truncate">{t(`${da}.tableEdit`)}</span>
+        </Button>
+        {isTrusted ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="min-w-0 gap-1 justify-center"
+            disabled={trustPending}
+            onClick={() => setUntrustOpen(true)}
+            aria-label={t(`${da}.clientsUntrustAria`)}
+          >
+            <span className="truncate">{t(`${da}.clientsUntrust`)}</span>
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="min-w-0 gap-1 justify-center"
+            disabled={trustPending}
+            onClick={() => setTrustOpen(true)}
+            aria-label={t(`${da}.clientsTrustAria`)}
+          >
+            <span className="truncate">{t(`${da}.clientsTrust`)}</span>
+          </Button>
+        )}
         <Button
           type="button"
           variant="secondary"
           size="sm"
-          className="gap-1"
+          className="min-w-0 gap-1 justify-center"
           disabled={!canBlacklist || blacklistPending}
           onClick={() => setBlacklistOpen(true)}
           aria-label={t(`${da}.clientsBlacklistAria`)}
         >
-          <Ban className="size-3.5" aria-hidden />
-          {t(`${da}.clientsBlacklist`)}
+          <Ban className="size-3.5 shrink-0" aria-hidden />
+          <span className="truncate">{t(`${da}.clientsBlacklist`)}</span>
         </Button>
-      ) : (
+        <Button
+          type="button"
+          variant="destructive"
+          size="sm"
+          className="min-w-0 gap-1 justify-center"
+          disabled={!canDelete || deleting}
+          onClick={() => setDeleteOpen(true)}
+        >
+          <Trash2 className="size-3.5 shrink-0" aria-hidden />
+          <span className="truncate">{deleting ? t(`${da}.tableDeleting`) : t(`${da}.tableDelete`)}</span>
+        </Button>
+      </div>
+    ) : (
+      <div className="grid w-full min-w-[11rem] grid-cols-2 gap-1.5">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="min-w-0 gap-1 justify-center"
+          onClick={() => setEditOpen(true)}
+        >
+          <Pencil className="size-3.5 shrink-0" aria-hidden />
+          <span className="truncate">{t(`${da}.tableEdit`)}</span>
+        </Button>
         <Button
           type="button"
           variant="secondary"
           size="sm"
-          className="gap-1"
+          className="min-w-0 gap-1 justify-center"
           disabled={blacklistPending}
           onClick={() => setUnblacklistOpen(true)}
           aria-label={t(`${da}.clientsUnblacklistAria`)}
         >
-          <ShieldCheck className="size-3.5" aria-hidden />
-          {t(`${da}.clientsUnblacklist`)}
+          <ShieldCheck className="size-3.5 shrink-0" aria-hidden />
+          <span className="truncate">{t(`${da}.clientsUnblacklist`)}</span>
         </Button>
-      )}
-      <Button
-        type="button"
-        variant="destructive"
-        size="sm"
-        className="gap-1"
-        disabled={!canDelete || deleting}
-        onClick={() => setDeleteOpen(true)}
-      >
-        <Trash2 className="size-3.5" aria-hidden />
-        {deleting ? t(`${da}.tableDeleting`) : t(`${da}.tableDelete`)}
-      </Button>
-    </div>
-  );
+        <Button
+          type="button"
+          variant="destructive"
+          size="sm"
+          className="col-span-2 min-w-0 gap-1 justify-center"
+          disabled={!canDelete || deleting}
+          onClick={() => setDeleteOpen(true)}
+        >
+          <Trash2 className="size-3.5 shrink-0" aria-hidden />
+          <span className="truncate">{deleting ? t(`${da}.tableDeleting`) : t(`${da}.tableDelete`)}</span>
+        </Button>
+      </div>
+    );
 
   return (
     <>
       {uiVariant === "table" ? (
-        <td className="p-3 align-top text-start whitespace-nowrap">{actionButtons}</td>
+        <td className="p-3 align-top text-start">{actionButtons}</td>
       ) : (
         <div className="mt-3 border-t border-border/80 pt-3">{actionButtons}</div>
       )}
+
+      <ConfirmModal
+        open={trustOpen}
+        title={t(`${da}.clientsTrustDialogTitle`)}
+        message={t(`${da}.clientsTrustConfirmDriver`)}
+        confirmLabel={t(`${da}.clientsTrust`)}
+        cancelLabel={t(`${da}.clientsCancel`)}
+        pendingLabel={t(`${da}.clientsTrustPending`)}
+        pending={trustPending}
+        confirmVariant="default"
+        onCancel={() => {
+          if (!trustPending) setTrustOpen(false);
+        }}
+        onConfirm={() => void performSetTrusted(true)}
+      />
+
+      <ConfirmModal
+        open={untrustOpen}
+        title={t(`${da}.clientsUntrustDialogTitle`)}
+        message={t(`${da}.clientsUntrustConfirmDriver`)}
+        confirmLabel={t(`${da}.clientsUntrust`)}
+        cancelLabel={t(`${da}.clientsCancel`)}
+        pendingLabel={t(`${da}.clientsUntrustPending`)}
+        pending={trustPending}
+        confirmVariant="default"
+        onCancel={() => {
+          if (!trustPending) setUntrustOpen(false);
+        }}
+        onConfirm={() => void performSetTrusted(false)}
+      />
 
       <ConfirmModal
         open={blacklistOpen}
@@ -872,10 +991,13 @@ export function DirectoryCarrierActions({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [blacklistOpen, setBlacklistOpen] = useState(false);
   const [unblacklistOpen, setUnblacklistOpen] = useState(false);
+  const [trustOpen, setTrustOpen] = useState(false);
+  const [untrustOpen, setUntrustOpen] = useState(false);
   const [errorAlert, setErrorAlert] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [blacklistPending, setBlacklistPending] = useState(false);
+  const [trustPending, setTrustPending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const [company_name, setCompany_name] = useState(row.company_name ?? "");
@@ -898,6 +1020,34 @@ export function DirectoryCarrierActions({
   useEffect(() => {
     if (editOpen) resetForm();
   }, [editOpen, resetForm]);
+
+  const isTrusted = Boolean(row.trustedAt);
+
+  async function performSetTrusted(trusted: boolean) {
+    setTrustPending(true);
+    try {
+      const res = await fetch(`/api/admin/shipment-companies/${row.id}/trusted`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trusted }),
+      });
+      if (!res.ok) {
+        setTrustOpen(false);
+        setUntrustOpen(false);
+        setErrorAlert(t(`${da}.clientsErrorGeneric`));
+        return;
+      }
+      setTrustOpen(false);
+      setUntrustOpen(false);
+      router.refresh();
+    } catch {
+      setTrustOpen(false);
+      setUntrustOpen(false);
+      setErrorAlert(t(`${da}.clientsErrorGeneric`));
+    } finally {
+      setTrustPending(false);
+    }
+  }
 
   async function save() {
     setSaving(true);
@@ -974,53 +1124,143 @@ export function DirectoryCarrierActions({
     }
   }
 
-  const actionButtons = (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => setEditOpen(true)}>
-        <Pencil className="size-3.5" aria-hidden />
-        {t(`${da}.tableEdit`)}
-      </Button>
-      {listVariant === "active" ? (
+  const actionButtons =
+    listVariant === "active" ? (
+      <div className="grid w-full min-w-[11rem] grid-cols-2 gap-1.5">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="min-w-0 gap-1 justify-center"
+          onClick={() => setEditOpen(true)}
+        >
+          <Pencil className="size-3.5 shrink-0" aria-hidden />
+          <span className="truncate">{t(`${da}.tableEdit`)}</span>
+        </Button>
+        {isTrusted ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="min-w-0 gap-1 justify-center"
+            disabled={trustPending}
+            onClick={() => setUntrustOpen(true)}
+            aria-label={t(`${da}.clientsUntrustAria`)}
+          >
+            <span className="truncate">{t(`${da}.clientsUntrust`)}</span>
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="min-w-0 gap-1 justify-center"
+            disabled={trustPending}
+            onClick={() => setTrustOpen(true)}
+            aria-label={t(`${da}.clientsTrustAria`)}
+          >
+            <span className="truncate">{t(`${da}.clientsTrust`)}</span>
+          </Button>
+        )}
         <Button
           type="button"
           variant="secondary"
           size="sm"
-          className="gap-1"
+          className="min-w-0 gap-1 justify-center"
           disabled={blacklistPending}
           onClick={() => setBlacklistOpen(true)}
           aria-label={t(`${da}.clientsBlacklistDirectoryAria`)}
         >
-          <Ban className="size-3.5" aria-hidden />
-          {t(`${da}.clientsBlacklist`)}
+          <Ban className="size-3.5 shrink-0" aria-hidden />
+          <span className="truncate">{t(`${da}.clientsBlacklist`)}</span>
         </Button>
-      ) : (
+        <Button
+          type="button"
+          variant="destructive"
+          size="sm"
+          className="min-w-0 gap-1 justify-center"
+          disabled={deleting}
+          onClick={() => setDeleteOpen(true)}
+        >
+          <Trash2 className="size-3.5 shrink-0" aria-hidden />
+          <span className="truncate">{deleting ? t(`${da}.tableDeleting`) : t(`${da}.tableDelete`)}</span>
+        </Button>
+      </div>
+    ) : (
+      <div className="grid w-full min-w-[11rem] grid-cols-2 gap-1.5">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="min-w-0 gap-1 justify-center"
+          onClick={() => setEditOpen(true)}
+        >
+          <Pencil className="size-3.5 shrink-0" aria-hidden />
+          <span className="truncate">{t(`${da}.tableEdit`)}</span>
+        </Button>
         <Button
           type="button"
           variant="secondary"
           size="sm"
-          className="gap-1"
+          className="min-w-0 gap-1 justify-center"
           disabled={blacklistPending}
           onClick={() => setUnblacklistOpen(true)}
           aria-label={t(`${da}.clientsUnblacklistDirectoryAria`)}
         >
-          <ShieldCheck className="size-3.5" aria-hidden />
-          {t(`${da}.clientsUnblacklist`)}
+          <ShieldCheck className="size-3.5 shrink-0" aria-hidden />
+          <span className="truncate">{t(`${da}.clientsUnblacklist`)}</span>
         </Button>
-      )}
-      <Button type="button" variant="destructive" size="sm" className="gap-1" disabled={deleting} onClick={() => setDeleteOpen(true)}>
-        <Trash2 className="size-3.5" aria-hidden />
-        {deleting ? t(`${da}.tableDeleting`) : t(`${da}.tableDelete`)}
-      </Button>
-    </div>
-  );
+        <Button
+          type="button"
+          variant="destructive"
+          size="sm"
+          className="col-span-2 min-w-0 gap-1 justify-center"
+          disabled={deleting}
+          onClick={() => setDeleteOpen(true)}
+        >
+          <Trash2 className="size-3.5 shrink-0" aria-hidden />
+          <span className="truncate">{deleting ? t(`${da}.tableDeleting`) : t(`${da}.tableDelete`)}</span>
+        </Button>
+      </div>
+    );
 
   return (
     <>
       {uiVariant === "table" ? (
-        <td className="p-3 align-top text-start whitespace-nowrap">{actionButtons}</td>
+        <td className="p-3 align-top text-start">{actionButtons}</td>
       ) : (
         <div className="mt-3 border-t border-border/80 pt-3">{actionButtons}</div>
       )}
+
+      <ConfirmModal
+        open={trustOpen}
+        title={t(`${da}.clientsTrustDialogTitle`)}
+        message={t(`${da}.clientsTrustConfirmDriver`)}
+        confirmLabel={t(`${da}.clientsTrust`)}
+        cancelLabel={t(`${da}.clientsCancel`)}
+        pendingLabel={t(`${da}.clientsTrustPending`)}
+        pending={trustPending}
+        confirmVariant="default"
+        onCancel={() => {
+          if (!trustPending) setTrustOpen(false);
+        }}
+        onConfirm={() => void performSetTrusted(true)}
+      />
+
+      <ConfirmModal
+        open={untrustOpen}
+        title={t(`${da}.clientsUntrustDialogTitle`)}
+        message={t(`${da}.clientsUntrustConfirmDriver`)}
+        confirmLabel={t(`${da}.clientsUntrust`)}
+        cancelLabel={t(`${da}.clientsCancel`)}
+        pendingLabel={t(`${da}.clientsUntrustPending`)}
+        pending={trustPending}
+        confirmVariant="default"
+        onCancel={() => {
+          if (!trustPending) setUntrustOpen(false);
+        }}
+        onConfirm={() => void performSetTrusted(false)}
+      />
 
       <ConfirmModal
         open={blacklistOpen}

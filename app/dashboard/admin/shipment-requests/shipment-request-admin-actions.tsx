@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +16,7 @@ import {
 export type CompatibleAssigneeRow = {
   source: "platformDriver" | "directoryCompany";
   id: string;
+  isTrusted: boolean;
   company_name: string | null;
   representative_name: string | null;
   phone: string | null;
@@ -149,15 +151,16 @@ export function ShipmentRequestAdminActions({
     }
   }
 
-  async function saveCarrierShortlist() {
-    if (shortlistKeys.length === 0) {
+  async function saveCarrierShortlist(keysOverride?: string[]) {
+    const keys = keysOverride ?? shortlistKeys;
+    if (keys.length === 0) {
       setError(t(`${a}.shipmentActionsShortlistRequired`));
       return;
     }
     setLoading("shortlist");
     setError(null);
     try {
-      const items = shortlistKeys.map((key) =>
+      const items = keys.map((key) =>
         key.startsWith("platformDriver:")
           ? { kind: "DRIVER" as const, targetId: key.slice("platformDriver:".length) }
           : { kind: "COMPANY" as const, targetId: key.slice("directory:".length) },
@@ -269,6 +272,25 @@ export function ShipmentRequestAdminActions({
       .toLowerCase();
     return hay.includes(q);
   });
+  const trustedCompatibleAssignees = filteredAssignees.filter(
+    (company) => company.source === "platformDriver" && company.isTrusted,
+  );
+  const orderedAssignees = [...filteredAssignees].sort((a, b) => {
+    if (a.isTrusted !== b.isTrusted) return a.isTrusted ? -1 : 1;
+    if (b.score !== a.score) return b.score - a.score;
+    return (a.company_name ?? "").localeCompare(b.company_name ?? "", "ar");
+  });
+
+  async function addAllTrustedDriversToRequest() {
+    const trustedKeys = trustedCompatibleAssignees.map((company) => assigneeKey(company));
+    if (trustedKeys.length === 0) {
+      setError(t(`${a}.shipmentActionsNoTrustedCompatible`));
+      return;
+    }
+    const merged = Array.from(new Set([...shortlistKeys, ...trustedKeys]));
+    setShortlistKeys(merged);
+    await saveCarrierShortlist(merged);
+  }
 
   return (
     <div className="pt-2 space-y-4">
@@ -308,13 +330,82 @@ export function ShipmentRequestAdminActions({
                 />
               </div>
 
+              {trustedCompatibleAssignees.length > 0 ? (
+                <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs font-semibold text-primary">
+                      {t(`${a}.shipmentActionsTrustedSectionTitle`)}
+                    </p>
+                    <Button
+                      size="sm"
+                      type="button"
+                      variant="default"
+                      className="gap-1.5 font-semibold shadow-md shadow-primary/30 ring-2 ring-primary/25 hover:ring-primary/40"
+                      onClick={() => void addAllTrustedDriversToRequest()}
+                      disabled={assignBusy}
+                    >
+                      <UserPlus className="size-4 shrink-0 opacity-95" aria-hidden />
+                      {loading === "shortlist"
+                        ? t(`${a}.shipmentActionsLoading`)
+                        : t(`${a}.shipmentActionsAddAllTrusted`)}
+                    </Button>
+                  </div>
+                  <div className="max-h-56 space-y-2 overflow-y-auto rounded-lg border border-border bg-background/80 p-2">
+                    {trustedCompatibleAssignees.map((company) => {
+                      const key = assigneeKey(company);
+                      const isSelected = shortlistKeySelected(key);
+                      return (
+                        <div
+                          key={`trusted-${key}`}
+                          className={cn(
+                            "flex gap-2 rounded-lg border px-2 py-2 transition-colors",
+                            isSelected
+                              ? "border-primary bg-primary/10 ring-1 ring-primary/30"
+                              : "border-border bg-background",
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            className="mt-1 size-4 shrink-0 accent-primary"
+                            checked={isSelected}
+                            onChange={() => toggleShortlistKey(key)}
+                            disabled={assignBusy}
+                            aria-label={t(`${a}.shipmentActionsShortlistToggle`)}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => toggleShortlistKey(key)}
+                            disabled={assignBusy}
+                            className="min-w-0 flex-1 rounded-md px-1 py-0.5 text-start transition-colors hover:bg-muted/30"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="text-sm font-semibold text-foreground">
+                                {company.company_name ?? t(`${a}.shipmentActionsUnknownCompany`)}
+                              </p>
+                              <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                                {t(`${a}.shipmentActionsTrustedBadge`)}
+                              </span>
+                            </div>
+                            {company.representative_name ? (
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                {company.representative_name}
+                              </p>
+                            ) : null}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
               <div className="max-h-80 space-y-2 overflow-y-auto rounded-lg border border-border bg-background/80 p-2">
                 {filteredAssignees.length === 0 ? (
                   <p className="px-2 py-3 text-xs text-muted-foreground">
                     {t(`${a}.shipmentActionsNoSearchResults`)}
                   </p>
                 ) : (
-                  filteredAssignees.map((company) => {
+                  orderedAssignees.map((company) => {
                     const key = assigneeKey(company);
                     const isSelected = shortlistKeySelected(key);
                     return (
@@ -346,6 +437,11 @@ export function ShipmentRequestAdminActions({
                               {company.company_name ?? t(`${a}.shipmentActionsUnknownCompany`)}
                             </p>
                             <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+                              {company.isTrusted ? (
+                                <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                                  {t(`${a}.shipmentActionsTrustedBadge`)}
+                                </span>
+                              ) : null}
                               {company.source === "platformDriver" ? (
                                 <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
                                   {t(`${a}.shipmentActionsPlatformCarrierBadge`)}

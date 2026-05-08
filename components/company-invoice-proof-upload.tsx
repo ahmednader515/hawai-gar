@@ -129,6 +129,7 @@ export function CompanyInvoiceProofUpload({ requestId, initialImageUrl, initialP
   };
 
   const busy = isUploading || saving || markingPaid;
+  const hasPendingProof = Boolean(selectedFile);
   const btnClass =
     "min-h-9 flex-1 rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50";
 
@@ -190,7 +191,12 @@ export function CompanyInvoiceProofUpload({ requestId, initialImageUrl, initialP
         />
         <button
           type="button"
-          className={twMerge(btnClass, "bg-primary text-primary-foreground hover:bg-primary/90")}
+          className={twMerge(
+            btnClass,
+            hasPendingProof
+              ? "border border-border bg-background text-foreground hover:bg-muted/80"
+              : "bg-primary text-primary-foreground hover:bg-primary/90",
+          )}
           onClick={() => inputRef.current?.click()}
           disabled={busy}
         >
@@ -198,7 +204,12 @@ export function CompanyInvoiceProofUpload({ requestId, initialImageUrl, initialP
         </button>
         <button
           type="button"
-          className={twMerge(btnClass, "border border-border bg-background text-foreground hover:bg-muted/80")}
+          className={twMerge(
+            btnClass,
+            hasPendingProof
+              ? "bg-emerald-600 text-white hover:bg-emerald-700"
+              : "border border-border bg-background text-foreground hover:bg-muted/80",
+          )}
           onClick={onSubmit}
           disabled={!selectedFile || busy}
         >

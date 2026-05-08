@@ -45,6 +45,8 @@ export async function PATCH(req: Request) {
     await setShipmentInvoiceSettings({
       companyName: typeof body?.companyName === "string" ? body.companyName : undefined,
       logoUrl: typeof body?.logoUrl === "string" ? body.logoUrl : undefined,
+      titleAr: typeof body?.titleAr === "string" ? body.titleAr : undefined,
+      titleEn: typeof body?.titleEn === "string" ? body.titleEn : undefined,
       notesAr: typeof body?.notesAr === "string" ? body.notesAr : undefined,
       notesEn: typeof body?.notesEn === "string" ? body.notesEn : undefined,
       bankAccounts,

@@ -26,6 +26,8 @@ export function AdminInvoiceSettingsForm({ initial }: { initial: ShipmentInvoice
   const { t } = useI18n();
   const [companyName, setCompanyName] = useState(initial.companyName);
   const [logoUrl, setLogoUrl] = useState(initial.logoUrl);
+  const [titleAr, setTitleAr] = useState(initial.titleAr);
+  const [titleEn, setTitleEn] = useState(initial.titleEn);
   const [notesAr, setNotesAr] = useState(initial.notesAr);
   const [notesEn, setNotesEn] = useState(initial.notesEn);
   const [accounts, setAccounts] = useState<InvoiceBankAccount[]>(
@@ -72,6 +74,8 @@ export function AdminInvoiceSettingsForm({ initial }: { initial: ShipmentInvoice
         body: JSON.stringify({
           companyName: companyName.trim(),
           logoUrl: logoUrl.trim(),
+          titleAr: titleAr.trim(),
+          titleEn: titleEn.trim(),
           notesAr: notesAr.trim(),
           notesEn: notesEn.trim(),
           bankAccounts: accounts,
@@ -110,6 +114,22 @@ export function AdminInvoiceSettingsForm({ initial }: { initial: ShipmentInvoice
             onChange={(e) => setLogoUrl(e.target.value)}
             dir="ltr"
             required
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="invoice-title-ar">{t("dashboard.admin.invoiceSettingsTitleAr")}</Label>
+          <Input id="invoice-title-ar" value={titleAr} onChange={(e) => setTitleAr(e.target.value)} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="invoice-title-en">{t("dashboard.admin.invoiceSettingsTitleEn")}</Label>
+          <Input
+            id="invoice-title-en"
+            value={titleEn}
+            onChange={(e) => setTitleEn(e.target.value)}
+            dir="ltr"
           />
         </div>
       </div>

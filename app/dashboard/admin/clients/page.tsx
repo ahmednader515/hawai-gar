@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { getTranslations } from "@/lib/i18n/server";
+import type { TrustedListRow } from "@/lib/admin-clients-types";
 import {
   AdminClientsTabs,
   type CompanyRow,
@@ -18,6 +19,15 @@ function parsePositiveInt(raw: string | undefined, fallback = 1): number {
 
 const activeCompanyWhere = { role: "COMPANY" as const, blacklistedAt: null };
 const activeDriverWhere = { role: "DRIVER" as const, blacklistedAt: null };
+const trustedDriverWhere = {
+  role: "DRIVER" as const,
+  blacklistedAt: null,
+  trustedAt: { not: null } as const,
+};
+const trustedDirectoryWhere = {
+  blacklistedAt: null,
+  trustedAt: { not: null } as const,
+};
 const activeDirectoryWhere = { blacklistedAt: null };
 const blacklistedCompanyWhere = { role: "COMPANY" as const, blacklistedAt: { not: null } as const };
 const blacklistedDriverWhere = { role: "DRIVER" as const, blacklistedAt: { not: null } as const };
@@ -30,6 +40,7 @@ export default async function AdminClientsPage({
     dcPage?: string;
     coPage?: string;
     drPage?: string;
+    trPage?: string;
     bcoPage?: string;
     bdrPage?: string;
     bdcPage?: string;
@@ -45,6 +56,8 @@ export default async function AdminClientsPage({
   const [
     companyTotal,
     driverTotal,
+    trustedDriverTotal,
+    trustedDirectoryTotal,
     directoryTotal,
     blacklistedCompanyTotal,
     blacklistedDriverTotal,
@@ -52,11 +65,16 @@ export default async function AdminClientsPage({
   ] = await Promise.all([
     prisma.user.count({ where: activeCompanyWhere }),
     prisma.user.count({ where: activeDriverWhere }),
+    prisma.user.count({ where: trustedDriverWhere }),
+    prisma.shipmentCompany.count({ where: trustedDirectoryWhere }),
     prisma.shipmentCompany.count({ where: activeDirectoryWhere }),
     prisma.user.count({ where: blacklistedCompanyWhere }),
     prisma.user.count({ where: blacklistedDriverWhere }),
     prisma.shipmentCompany.count({ where: blacklistedDirectoryWhere }),
   ]);
+
+  const trustedTotal = trustedDriverTotal + trustedDirectoryTotal;
+  const trustedTotalPages = Math.max(1, Math.ceil(trustedTotal / PAGE_SIZE));
 
   const companyTotalPages = Math.max(1, Math.ceil(companyTotal / PAGE_SIZE));
   const driverTotalPages = Math.max(1, Math.ceil(driverTotal / PAGE_SIZE));
@@ -70,6 +88,9 @@ export default async function AdminClientsPage({
 
   let driverPage = parsePositiveInt(sp.drPage);
   if (driverPage > driverTotalPages) driverPage = driverTotalPages;
+
+  let trustedPage = parsePositiveInt(sp.trPage);
+  if (trustedPage > trustedTotalPages) trustedPage = trustedTotalPages;
 
   let directoryPage = parsePositiveInt(sp.dcPage);
   if (directoryPage > directoryTotalPages) directoryPage = directoryTotalPages;
@@ -111,6 +132,7 @@ export default async function AdminClientsPage({
     email: true,
     name: true,
     createdAt: true,
+    trustedAt: true,
     driverProfile: {
       select: {
         fullName: true,
@@ -136,6 +158,7 @@ export default async function AdminClientsPage({
     phone: true,
     truck_types: true,
     destinations: true,
+    trustedAt: true,
     createdAt: true,
   } as const;
 
@@ -191,6 +214,56 @@ export default async function AdminClientsPage({
     }),
   ]);
 
+  const [trustedDriverMeta, trustedDirectoryMeta] = await Promise.all([
+    prisma.user.findMany({
+      where: trustedDriverWhere,
+      select: { id: true, trustedAt: true },
+    }),
+    prisma.shipmentCompany.findMany({
+      where: trustedDirectoryWhere,
+      select: { id: true, trustedAt: true },
+    }),
+  ]);
+
+  type TrustedMeta =
+    | { kind: "platform"; id: string; trustedAt: Date }
+    | { kind: "directory"; id: string; trustedAt: Date };
+
+  const mergedTrustedMeta: TrustedMeta[] = [
+    ...trustedDriverMeta.map((u) => ({
+      kind: "platform" as const,
+      id: u.id,
+      trustedAt: u.trustedAt!,
+    })),
+    ...trustedDirectoryMeta.map((r) => ({
+      kind: "directory" as const,
+      id: r.id,
+      trustedAt: r.trustedAt!,
+    })),
+  ].sort((a, b) => b.trustedAt.getTime() - a.trustedAt.getTime());
+
+  const trustedSlice = mergedTrustedMeta.slice((trustedPage - 1) * PAGE_SIZE, trustedPage * PAGE_SIZE);
+  const trustedPlatformIds = trustedSlice.filter((m) => m.kind === "platform").map((m) => m.id);
+  const trustedDirectoryIds = trustedSlice.filter((m) => m.kind === "directory").map((m) => m.id);
+
+  const [trustedDriverFull, trustedDirectoryFull] = await Promise.all([
+    trustedPlatformIds.length > 0
+      ? prisma.user.findMany({
+          where: { id: { in: trustedPlatformIds } },
+          select: driverSelect,
+        })
+      : Promise.resolve([]),
+    trustedDirectoryIds.length > 0
+      ? prisma.shipmentCompany.findMany({
+          where: { id: { in: trustedDirectoryIds } },
+          select: directorySelect,
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const trustedDriverById = new Map(trustedDriverFull.map((u) => [u.id, u]));
+  const trustedDirectoryById = new Map(trustedDirectoryFull.map((r) => [r.id, r]));
+
   const mapCompany = (u: (typeof companyUsers)[0]): CompanyRow => ({
     id: u.id,
     email: u.email,
@@ -204,11 +277,12 @@ export default async function AdminClientsPage({
     commercialRegister: u.companyProfile?.commercialRegister ?? null,
   });
 
-  const mapDriver = (u: (typeof driverUsers)[0]): CarrierRow => ({
+  const mapDriver = (u: (typeof driverUsers)[0] | (typeof trustedDriverFull)[number]): CarrierRow => ({
     id: u.id,
     email: u.email,
     name: u.name,
     createdAt: u.createdAt.toISOString(),
+    trustedAt: u.trustedAt ? u.trustedAt.toISOString() : null,
     fullName: u.driverProfile?.fullName ?? null,
     phone: u.driverProfile?.phone ?? null,
     carPlate: u.driverProfile?.carPlate ?? null,
@@ -222,7 +296,9 @@ export default async function AdminClientsPage({
     serviceDestinations: u.driverProfile?.serviceDestinations ?? null,
   });
 
-  const mapDirectory = (row: (typeof shipmentCompanyDirectory)[0]): ShipmentCompanyDirectoryRow => ({
+  const mapDirectory = (
+    row: (typeof shipmentCompanyDirectory)[0] | (typeof trustedDirectoryFull)[number],
+  ): ShipmentCompanyDirectoryRow => ({
     id: row.id,
     company_name: row.company_name,
     representative_name: row.representative_name,
@@ -230,12 +306,28 @@ export default async function AdminClientsPage({
     phone: row.phone,
     truck_types: row.truck_types,
     destinations: row.destinations,
+    trustedAt: row.trustedAt ? row.trustedAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
   });
 
   const companies: CompanyRow[] = companyUsers.map(mapCompany);
   const registeredCarriers: CarrierRow[] = driverUsers.map(mapDriver);
   const directoryCarriers: ShipmentCompanyDirectoryRow[] = shipmentCompanyDirectory.map(mapDirectory);
+
+  const trustedListRows: TrustedListRow[] = trustedSlice.map((meta) => {
+    if (meta.kind === "platform") {
+      const u = trustedDriverById.get(meta.id);
+      if (!u) {
+        throw new Error(`Trusted list: missing platform carrier ${meta.id}`);
+      }
+      return { kind: "platform" as const, row: mapDriver(u) };
+    }
+    const r = trustedDirectoryById.get(meta.id);
+    if (!r) {
+      throw new Error(`Trusted list: missing directory row ${meta.id}`);
+    }
+    return { kind: "directory" as const, row: mapDirectory(r) };
+  });
 
   const blacklistedCompanies: CompanyRow[] = blacklistedCompanyUsers.map(mapCompany);
   const blacklistedCarriers: CarrierRow[] = blacklistedDriverUsers.map(mapDriver);
@@ -261,6 +353,10 @@ export default async function AdminClientsPage({
         driverPage={driverPage}
         driverTotal={driverTotal}
         driverTotalPages={driverTotalPages}
+        trustedListRows={trustedListRows}
+        trustedPage={trustedPage}
+        trustedTotal={trustedTotal}
+        trustedTotalPages={trustedTotalPages}
         directoryPage={directoryPage}
         directoryTotal={directoryTotal}
         directoryTotalPages={directoryTotalPages}

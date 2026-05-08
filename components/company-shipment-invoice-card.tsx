@@ -9,10 +9,12 @@ export function CompanyShipmentInvoiceCard({
   requestId,
   locale,
   extra,
+  wording = "invoice",
 }: {
   requestId: string;
   locale: "ar" | "en";
   extra?: React.ReactNode;
+  wording?: "invoice" | "receipt";
 }) {
   const { t } = useI18n();
   const [invoice, setInvoice] = useState<ShipmentInvoiceData | null>(null);
@@ -59,19 +61,22 @@ export function CompanyShipmentInvoiceCard({
     );
   }
 
+  const replaceInvoiceWithReceipt = (s: string) =>
+    locale === "ar" && wording === "receipt" ? s.replaceAll("فاتورة", "ايصال") : s;
+
   return (
     <div className="mt-2 space-y-2">
-      <p className="text-sm text-foreground">{t("hero.invoiceCardIntro")}</p>
+      <p className="text-sm text-foreground">{replaceInvoiceWithReceipt(t("hero.invoiceCardIntro"))}</p>
       <ShipmentInvoiceCard
         invoice={invoice}
         locale={locale}
         labels={{
-          title: t("hero.invoiceCardTitle"),
-          invoiceNumber: t("hero.invoiceNumberLabel"),
+          title: locale === "ar" ? invoice.settings.titleAr : invoice.settings.titleEn,
+          invoiceNumber: replaceInvoiceWithReceipt(t("hero.invoiceNumberLabel")),
           issuedAt: t("hero.invoiceIssuedAtLabel"),
           amount: t("hero.invoiceAmountLabel"),
           route: t("hero.route"),
-          requestDetails: t("hero.invoiceRequestDetailsTitle"),
+          requestDetails: replaceInvoiceWithReceipt(t("hero.invoiceRequestDetailsTitle")),
           shipmentType: t("hero.shipmentType"),
           containerSize: t("hero.containerSize"),
           containersCount: t("hero.containersCount"),
@@ -92,7 +97,7 @@ export function CompanyShipmentInvoiceCard({
               rel="noopener noreferrer"
               className="inline-flex h-9 items-center rounded-lg border border-border bg-background px-3 text-sm font-medium text-foreground hover:bg-muted"
             >
-              {t("hero.invoiceOpen")}
+              {replaceInvoiceWithReceipt(t("hero.invoiceOpen"))}
             </a>
             <a
               href={`/shipment-requests/${requestId}/invoice?print=1`}

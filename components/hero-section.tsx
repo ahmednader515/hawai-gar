@@ -1360,8 +1360,12 @@ export function HeroSection({
                                 setTrackingId(item.id);
                                 void trackShipmentRequest(item.id);
                               }}
-                              className="block w-full rounded-lg border border-border bg-background p-3 text-start hover:bg-muted/40 transition-colors"
+                              className="group relative block w-full rounded-lg border-2 border-emerald-500/70 bg-background p-3 text-start transition-[box-shadow,transform,background-color] hover:bg-muted/40 hover:shadow-md hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70 focus-visible:ring-offset-2"
                             >
+                              <span
+                                aria-hidden
+                                className="pointer-events-none absolute inset-0 rounded-[inherit] ring-2 ring-emerald-400/30 blur-[1px] animate-pulse"
+                              />
                               <div className="flex items-center justify-between gap-3">
                                 <span className="text-sm font-semibold text-foreground">{item.id}</span>
                                 <span className="text-xs text-muted-foreground">
@@ -1375,6 +1379,11 @@ export function HeroSection({
                               </div>
                               <div className="mt-1 text-xs font-medium text-foreground">
                                 {statusLabel !== statusKey ? statusLabel : item.status}
+                              </div>
+                              <div className="mt-3 flex justify-end">
+                                <span className="inline-flex items-center justify-center rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition group-hover:bg-emerald-700">
+                                  {t("dashboard.client.clickHereForDetails")}
+                                </span>
                               </div>
                             </button>
                           );
@@ -1426,6 +1435,11 @@ export function HeroSection({
                             return localized !== key ? localized : trackingResult.data.statusLabel;
                           })()}
                         </div>
+                        {String(trackingResult.data.status) === "PENDING_CARRIER" ? (
+                          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-950">
+                            {t("hero.pendingCarrierResponseHint")}
+                          </div>
+                        ) : null}
                         <div className="text-sm opacity-90">
                           {t("hero.route")
                             .replace("{from}", String(trackingResult.data.from))
@@ -1482,6 +1496,7 @@ export function HeroSection({
                             <CompanyShipmentInvoiceCard
                               requestId={String(trackingResult.data.id)}
                               locale={locale === "ar" ? "ar" : "en"}
+                              wording="receipt"
                               extra={
                                 ["ADMIN_APPROVED", "AWAITING_PAYMENT_APPROVAL"].includes(
                                   String(trackingResult.data.status),
