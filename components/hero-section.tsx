@@ -13,6 +13,7 @@ import Link from "next/link";
 import type { PickedLocation } from "@/components/mapbox-location-picker";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { CopyableRequestId } from "@/components/copyable-request-id";
+import { PointsBalanceBadge } from "@/components/points-balance-badge";
 import { TRUCK_SIZE_OPTIONS, TRUCK_TYPE_OPTIONS_BY_SIZE, type TruckOption } from "@/lib/truck-options";
 import {
   DEFAULT_COMPANY_PROFIT_MARGIN_PCT,
@@ -161,11 +162,13 @@ type ShipmentTermsContent = {
 export function HeroSection({
   isLoggedIn = false,
   userRole = null,
+  companyPointsBalance = null,
   contactEmail = "info@hawajgar.com",
   contactPhone = null,
 }: {
   isLoggedIn?: boolean;
   userRole?: string | null;
+  companyPointsBalance?: number | null;
   contactEmail?: string;
   contactPhone?: string | null;
 }) {
@@ -1075,7 +1078,12 @@ export function HeroSection({
           <div className="w-full max-w-2xl mt-6 sm:mt-8 bg-white rounded-2xl shadow-2xl p-4 sm:p-6 md:p-8 border border-gray-100 mx-2 sm:mx-0">
             <div className="flex items-start justify-between gap-4 mb-4">
               <div className="min-w-0">
-                <h3 className="text-lg sm:text-xl font-bold text-foreground">{t("hero.panelTitle")}</h3>
+                <div className="flex flex-wrap items-center gap-2 gap-y-1">
+                  <h3 className="text-lg sm:text-xl font-bold text-foreground">{t("hero.panelTitle")}</h3>
+                  {effectiveUserRole === "COMPANY" && companyPointsBalance != null ? (
+                    <PointsBalanceBadge balance={companyPointsBalance} variant="hero" />
+                  ) : null}
+                </div>
                 <div className="mt-2 grid grid-cols-3 gap-1 rounded-lg border border-border bg-muted/20 p-1 sm:inline-flex sm:flex-wrap">
                   <button
                     type="button"

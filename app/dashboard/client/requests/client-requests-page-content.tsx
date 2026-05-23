@@ -50,7 +50,7 @@ export type SerializedLegacyOrder = {
   companyName: string | null;
 };
 
-export type IncomingStatusFilter = "all" | "PENDING_CARRIER" | "AWAITING_ADMIN";
+export type IncomingStatusFilter = "all" | "PENDING_CARRIER" | "AWAITING_ADMIN" | "COMPLETE";
 
 function shipmentMatchesIncomingFilter(
   r: SerializedShipmentRequest,
@@ -61,6 +61,7 @@ function shipmentMatchesIncomingFilter(
   if (filter === "AWAITING_ADMIN") {
     return r.status === "CARRIER_ACCEPTED" || r.status === "CARRIER_REFUSED";
   }
+  if (filter === "COMPLETE") return r.status === "COMPLETE";
   return true;
 }
 
@@ -219,6 +220,16 @@ export function ClientRequestsPageContent({
                 >
                   {shipmentStatusLabel("AWAITING_ADMIN", t)}
                 </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={statusFilter === "COMPLETE" ? "default" : "outline"}
+                  aria-pressed={statusFilter === "COMPLETE"}
+                  className="h-auto min-h-8 max-w-full justify-center px-3 py-2 text-start leading-snug whitespace-normal sm:max-w-[min(100%,20rem)]"
+                  onClick={() => setStatusFilter("COMPLETE")}
+                >
+                  {shipmentStatusLabel("COMPLETE", t)}
+                </Button>
               </div>
             </div>
           ) : null}
@@ -347,11 +358,19 @@ export function ClientRequestsPageContent({
                         from={{ lat: r.fromLat, lng: r.fromLng }}
                         to={{ lat: r.toLat, lng: r.toLng }}
                         heightClassName="h-36 sm:h-40"
+                        fromRevealExact={r.status === "COMPLETE"}
                       />
                       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
                         <div className="flex items-center gap-2">
-                          <span className="inline-block h-3 w-3 rounded-sm bg-[#1b8254]" aria-hidden />
-                          {t("hero.mapFrom")}
+                          {r.status === "COMPLETE" ? (
+                            <span className="inline-block h-3 w-3 rounded-sm bg-[#1b8254]" aria-hidden />
+                          ) : (
+                            <span
+                              className="inline-block h-3 w-3 rounded-full border-2 border-[#1b8254] bg-[#1b8254]/20"
+                              aria-hidden
+                            />
+                          )}
+                          {r.status === "COMPLETE" ? t("hero.mapFrom") : t("dashboard.client.mapFromApprox")}
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="inline-block h-3 w-3 rounded-sm bg-[#f59e0b]" aria-hidden />

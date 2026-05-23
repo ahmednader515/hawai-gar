@@ -7,6 +7,7 @@ import { LogOut } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { PointsBalanceBadge } from "@/components/points-balance-badge";
 
 type Role = "ADMIN" | "SUPERVISOR" | "COMPANY" | "DRIVER";
 
@@ -31,9 +32,11 @@ function logoutButtonClassName(variant: "header" | "mobileHeader") {
 export function DashboardNav({
   role,
   email,
+  pointsBalance = null,
 }: {
   role: Role;
   email: string | null;
+  pointsBalance?: number | null;
 }) {
   const { t } = useI18n();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -140,6 +143,9 @@ export function DashboardNav({
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+            {role === "DRIVER" && pointsBalance != null ? (
+              <PointsBalanceBadge balance={pointsBalance} className="hidden sm:inline-flex" />
+            ) : null}
             <LanguageSwitcher variant="default" />
             {/* Desktop: logout */}
             <button
@@ -164,6 +170,18 @@ export function DashboardNav({
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
+                </button>
+              </div>
+            ) : role === "DRIVER" && pointsBalance != null ? (
+              <div className="flex items-center gap-1 md:hidden">
+                <PointsBalanceBadge balance={pointsBalance} variant="compact" />
+                <button
+                  type="button"
+                  className={`${logoutButtonClassName("mobileHeader")} md:hidden`}
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                >
+                  <LogOut className="w-5 h-5 shrink-0" aria-hidden />
+                  <span className="sr-only">{t("common.logout")}</span>
                 </button>
               </div>
             ) : (

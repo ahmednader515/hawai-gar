@@ -243,7 +243,25 @@ export function ClientOrdersPageContent({
                         from={{ lat: r.fromLat, lng: r.fromLng }}
                         to={{ lat: r.toLat, lng: r.toLng }}
                         heightClassName="h-36 sm:h-40"
+                        fromRevealExact={r.status === "COMPLETE"}
                       />
+                      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          {r.status === "COMPLETE" ? (
+                            <span className="inline-block h-3 w-3 rounded-sm bg-[#1b8254]" aria-hidden />
+                          ) : (
+                            <span
+                              className="inline-block h-3 w-3 rounded-full border-2 border-[#1b8254] bg-[#1b8254]/20"
+                              aria-hidden
+                            />
+                          )}
+                          {r.status === "COMPLETE" ? t("hero.mapFrom") : t("dashboard.client.mapFromApprox")}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="inline-block h-3 w-3 rounded-sm bg-[#f59e0b]" aria-hidden />
+                          {t("hero.mapTo")}
+                        </div>
+                      </div>
                     </div>
                   )}
                   <p className="text-xs text-muted-foreground pt-1 rounded-lg bg-muted/30 px-3 py-2">

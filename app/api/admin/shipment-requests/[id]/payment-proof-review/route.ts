@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { awardShipmentCompletionPoints } from "@/lib/award-shipment-completion-points";
 import { sendShipmentCompletedEmails } from "@/lib/shipment-completion-email";
 
 /** Admin approves or rejects company-uploaded payment proof image. */
@@ -44,6 +45,11 @@ export async function PATCH(
         where: { id },
         data: { status: "COMPLETE" },
       });
+      try {
+        await awardShipmentCompletionPoints(id);
+      } catch (e) {
+        console.error("[payment-proof-review] points award:", e);
+      }
       try {
         await sendShipmentCompletedEmails(id);
       } catch (e) {

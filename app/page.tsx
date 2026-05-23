@@ -94,6 +94,19 @@ export default async function Home() {
   let newsItems: Awaited<ReturnType<typeof prisma.newsItem.findMany>> = [];
   let advisories: Awaited<ReturnType<typeof prisma.customerAdvisory.findMany>> = [];
   let heroContact = { email: "info@hawajgar.com", phone: null as string | null };
+  let companyPointsBalance: number | null = null;
+  if (session?.user?.role === "COMPANY") {
+    try {
+      const companyUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { pointsBalance: true },
+      });
+      companyPointsBalance = companyUser?.pointsBalance ?? 0;
+    } catch {
+      companyPointsBalance = 0;
+    }
+  }
+
   try {
     ({ newsItems, advisories, heroContact } = await getHomeContent());
   } catch {
@@ -105,6 +118,7 @@ export default async function Home() {
       <HeroSection
         isLoggedIn={!!session?.user}
         userRole={session?.user?.role ?? null}
+        companyPointsBalance={companyPointsBalance}
         contactEmail={heroContact.email}
         contactPhone={heroContact.phone}
       />

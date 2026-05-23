@@ -8,6 +8,12 @@ import {
   getDrivingRouteOrStraight,
   fitMapToCoordinates,
 } from "@/lib/mapbox-driving-route";
+import {
+  FROM_LOCATION_AREA_RADIUS_KM,
+  addFromAreaLayers,
+  getGeodesicCircleRing,
+  removeFromAreaLayers,
+} from "@/lib/mapbox-geodesic-circle";
 
 type LatLng = { lat: number; lng: number };
 
@@ -16,11 +22,16 @@ export function MapboxLocationPreview({
   to,
   heightClassName = "h-28 sm:h-32",
   interactive = false,
+  fromRevealExact = true,
+  fromAreaRadiusKm = FROM_LOCATION_AREA_RADIUS_KM,
 }: {
   from: LatLng | null | undefined;
   to: LatLng | null | undefined;
   heightClassName?: string;
   interactive?: boolean;
+  /** When false, pickup is shown as an area circle instead of an exact pin. */
+  fromRevealExact?: boolean;
+  fromAreaRadiusKm?: number;
 }) {
   const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -29,6 +40,7 @@ export function MapboxLocationPreview({
   const routeAbortRef = useRef<AbortController | null>(null);
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN ?? "";
+  const showFromAsArea = !fromRevealExact && !!from;
 
   const points = useMemo(() => {
     const p: LatLng[] = [];
@@ -61,11 +73,10 @@ export function MapboxLocationPreview({
     mapRef.current = map;
 
     const addMarkers = () => {
-      // Cleanup any previous markers (shouldn't happen often, but safe)
       markersRef.current.forEach((m) => m.remove());
       markersRef.current = [];
 
-      if (from) {
+      if (from && fromRevealExact) {
         const m = new mapboxgl.Marker({ color: "#1b8254" }).setLngLat([from.lng, from.lat]).addTo(map);
         markersRef.current.push(m);
       }
@@ -73,6 +84,18 @@ export function MapboxLocationPreview({
         const m = new mapboxgl.Marker({ color: "#f59e0b" }).setLngLat([to.lng, to.lat]).addTo(map);
         markersRef.current.push(m);
       }
+    };
+
+    const addFromArea = () => {
+      removeFromAreaLayers(map);
+      if (showFromAsArea && from) {
+        addFromAreaLayers(map, from, fromAreaRadiusKm);
+      }
+    };
+
+    const fitBoundsCoords = (coords: [number, number][]) => {
+      if (coords.length === 0) return;
+      fitMapToCoordinates(map, coords);
     };
 
     const fit = () => {
@@ -83,6 +106,11 @@ export function MapboxLocationPreview({
         );
         map.fitBounds(bounds, { padding: 40, maxZoom: 12, duration: 0 });
       }
+    };
+
+    const extendCoordsForFromArea = (coords: [number, number][]): [number, number][] => {
+      if (!showFromAsArea || !from) return coords;
+      return [...coords, ...getGeodesicCircleRing(from, fromAreaRadiusKm)];
     };
 
     map.on("load", () => {
@@ -96,14 +124,20 @@ export function MapboxLocationPreview({
             const line = await getDrivingRouteOrStraight(from, to, token, signal);
             if (signal.aborted || mapRef.current !== map) return;
             addDrivingRouteLayer(map, line);
-            fitMapToCoordinates(map, line.coordinates);
+            addFromArea();
+            addMarkers();
+            fitBoundsCoords(extendCoordsForFromArea(line.coordinates));
           } catch {
             /* aborted or torn down */
           }
-        }
-        addMarkers();
-        if (!(from && to)) {
-          fit();
+        } else {
+          addFromArea();
+          addMarkers();
+          if (showFromAsArea && from) {
+            fitBoundsCoords(getGeodesicCircleRing(from, fromAreaRadiusKm));
+          } else {
+            fit();
+          }
         }
       })();
     });
@@ -133,13 +167,12 @@ export function MapboxLocationPreview({
       routeAbortRef.current = null;
       markersRef.current.forEach((m) => m.remove());
       markersRef.current = [];
+      removeFromAreaLayers(map);
       map.remove();
       mapRef.current = null;
     };
-  }, [token, points.length, interactive, from, to]);
+  }, [token, points.length, interactive, from, to, fromRevealExact, fromAreaRadiusKm, showFromAsArea]);
 
-  // If coords change, easiest is to rely on rerender + effect guard being strict.
-  // We intentionally keep this lightweight; details page usually navigates to different ids.
   return (
     <div
       ref={containerRef}
@@ -148,4 +181,3 @@ export function MapboxLocationPreview({
     />
   );
 }
-

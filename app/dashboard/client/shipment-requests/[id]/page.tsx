@@ -317,12 +317,25 @@ export default async function ClientShipmentRequestDetailPage({
                     to={{ lat: r.toLat as number, lng: r.toLng as number }}
                     heightClassName="h-[min(420px,55vh)] min-h-[240px] w-full sm:h-[min(440px,50vh)]"
                     interactive
+                    fromRevealExact={r.status === "COMPLETE"}
                   />
                 </div>
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-2">
-                    <span className="inline-block h-3 w-3 rounded-sm bg-[#1b8254]" aria-hidden />
-                    {t("hero.from").replace(":", "").trim()}
+                    {r.status === "COMPLETE" ? (
+                      <span className="inline-block h-3 w-3 rounded-sm bg-[#1b8254]" aria-hidden />
+                    ) : (
+                      <span
+                        className="inline-block h-3 w-3 rounded-full border-2 border-[#1b8254] bg-[#1b8254]/20"
+                        aria-hidden
+                      />
+                    )}
+                    {(r.status === "COMPLETE"
+                      ? t("hero.from")
+                      : t("dashboard.client.mapFromApprox")
+                    )
+                      .replace(":", "")
+                      .trim()}
                   </span>
                   <span className="inline-flex items-center gap-2">
                     <span className="inline-block h-3 w-3 rounded-sm bg-[#f59e0b]" aria-hidden />

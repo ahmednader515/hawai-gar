@@ -14,6 +14,7 @@ import {
   Users,
   FileText,
   ReceiptText,
+  Star,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -24,6 +25,7 @@ const LINK_DEFS = [
   { href: "/dashboard/admin", labelKey: "nav.admin.orders", shortKey: "nav.admin.ordersShort", icon: ClipboardList },
   { href: "/dashboard/admin/clients", labelKey: "nav.admin.clients", shortKey: "nav.admin.clientsShort", icon: Users },
   { href: "/dashboard/admin/pricing", labelKey: "nav.admin.pricing", shortKey: "nav.admin.pricingShort", icon: Banknote },
+  { href: "/dashboard/admin/points", labelKey: "nav.admin.points", shortKey: "nav.admin.pointsShort", icon: Star },
   { href: "/dashboard/admin/invoice", labelKey: "nav.admin.invoice", shortKey: "nav.admin.invoiceShort", icon: ReceiptText },
   { href: "/dashboard/admin/analytics", labelKey: "nav.admin.analytics", shortKey: "nav.admin.analyticsShort", icon: BarChart3 },
   { href: "/dashboard/admin/terms", labelKey: "nav.admin.terms", shortKey: "nav.admin.termsShort", icon: FileText },
@@ -48,6 +50,9 @@ function linkActive(pathname: string, href: string) {
   }
   if (href === "/dashboard/admin/pricing") {
     return pathname === "/dashboard/admin/pricing";
+  }
+  if (href === "/dashboard/admin/points") {
+    return pathname === "/dashboard/admin/points";
   }
   if (href === "/dashboard/admin/account") {
     return pathname === "/dashboard/admin/account";

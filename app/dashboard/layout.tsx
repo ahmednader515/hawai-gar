@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { DashboardNav } from "@/components/dashboard-nav";
+import { prisma } from "@/lib/db";
 
 export default async function DashboardLayout({
   children,
@@ -14,11 +15,21 @@ export default async function DashboardLayout({
 
   const role = session.user.role;
 
+  let pointsBalance: number | null = null;
+  if (role === "DRIVER") {
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { pointsBalance: true },
+    });
+    pointsBalance = user?.pointsBalance ?? 0;
+  }
+
   return (
     <div className="min-h-screen bg-muted/20 w-full max-w-[100vw] overflow-hidden flex flex-col">
       <DashboardNav
         role={role as "ADMIN" | "SUPERVISOR" | "COMPANY" | "DRIVER"}
         email={session.user.email ?? null}
+        pointsBalance={pointsBalance}
       />
       {/* overflow-y only inside role layouts so desktop sidebars stay visible */}
       <main className="flex min-h-0 w-full max-w-full min-w-0 flex-1 flex-col overflow-hidden py-4 max-md:px-[5vw] md:px-4">

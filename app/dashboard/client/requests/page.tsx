@@ -20,7 +20,7 @@ export default async function ClientRequestsPage() {
   const shipmentRequests = await prisma.shipmentRequest.findMany({
     where: {
       status: {
-        notIn: ["ADMIN_APPROVED", "AWAITING_PAYMENT_APPROVAL", "COMPLETE", "ADMIN_REJECTED"],
+        notIn: ["ADMIN_APPROVED", "AWAITING_PAYMENT_APPROVAL", "ADMIN_REJECTED"],
       },
       AND: [shipmentRequestVisibleToDriverWhere(session.user.id)],
     },
